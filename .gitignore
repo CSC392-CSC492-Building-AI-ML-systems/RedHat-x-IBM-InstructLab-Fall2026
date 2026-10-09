@@ -1,0 +1,23 @@
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Model files and checkpoints (stored on the cluster, not in git)
+models/
+checkpoints/
+*.safetensors
+*.gguf
+*.bin
+*.pt
+
+# Secrets (e.g. Hugging Face tokens)
+.env
+
+# Claude Code files
+.claude/
+CLAUDE.md
+
+# OS files
+.DS_Store
