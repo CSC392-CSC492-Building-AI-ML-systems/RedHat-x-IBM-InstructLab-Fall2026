@@ -1,0 +1,22 @@
+version: 3
+created_by: <your-github-username>
+domain: computer_science
+document_outline: |
+  Covers mathematical induction as taught in CSC236, including simple induction,
+  strong induction, and structural induction on recursive definitions.
+seed_examples:
+  - context: |
+      <Paste a short passage (< 500 tokens) from data/sources/csc236/induction/*.md>
+    questions_and_answers:
+      - question: <Question answerable from the context above.>
+        answer: <Complete, correct answer grounded in the passage.>
+      - question: <Question 2>
+        answer: <Answer 2>
+      - question: <Question 3>
+        answer: <Answer 3>
+  # Add 4 more context blocks (5 total), each with 3 Q&A pairs.
+document:
+  repo: https://github.com/<org>/<repo>      # must contain the markdown at the commit below
+  commit: <40-character commit SHA>
+  patterns:
+    - data/sources/csc236/induction/*.md
