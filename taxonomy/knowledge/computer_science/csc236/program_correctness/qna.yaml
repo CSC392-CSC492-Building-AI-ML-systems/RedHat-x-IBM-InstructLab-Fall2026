@@ -1,19 +1,57 @@
 version: 3
-created_by: <your-github-username>
-domain: computer_science
+created_by: Raynard02
+domain: program_correctness
 document_outline: |
   One or two sentences: what this topic covers and which course documents are used.
 seed_examples:
   - context: |
-      A passage copied from the source markdown (keep it short, well under 500 tokens).
+      You may be familiar with the most common tools used to specify program correctness, preconditions and postconditions. Formally, a precondition of a function is a property that an input to the function must satisfy in order to guarantee that the function will work properly. A postcondition of a function is a property that must be satisfied after the function completes. Most commonly, this refers to properties of a return value, though it can also refer to changes to the variables passed in as with the implementation of quicksort from the previous chapter (which didn’t return anything but instead changed the input list A). So preconditions tell us what must be true before the program starts, and postconditions tell us what must be true after the program terminates (assuming it ends at all). We have the following formal statement of correctness. Though it is written in more formal language, note that it really captures what we mean when we say that a program is “correct.” Definition (Program Correctness). Let f be a function with a set of preconditions and postconditions. Then f is correct (with respect to the pre- and postconditions) if the following holds, For every input I to f, if I satisfies the preconditions, then f(I) terminates, and all the postconditions hold after it terminates.
     questions_and_answers:
-      - question: A question the passage answers.
-        answer: A complete, correct answer grounded in the passage.
-      - question: ...
-        answer: ...
-      - question: ...
-        answer: ...
-  # repeat for 5 contexts total, each with 3 question/answer pairs
+      - question: What is a precondition?
+        answer: a precondition of a function is a property that an input to the function must satisfy in order to guarantee that the function will work properly.
+      - question: What is a postcondition?
+        answer: a postcondition of a function is a property that must be satisfied after the function completes
+      - question: What is program correctness?
+        answer: Let f be a function with a set of preconditions and postconditions. Then f is correct (with respect to the pre- and postconditions) if the following holds For every input I to f, if I satisfies the preconditions, then f(I) terminates, and all the postconditions hold after it terminates.
+  - context: |
+      Writing full induction proofs that formalise the above logic is tedious, so instead we use the fundamental idea in a looser template. For each program path from the first line to a return statement, we show that it terminates and that, when it does, the postconditions are satisfied. We do this as follows: • If the path contains no recursive calls or loops, analyse the code line by line until the return statement. • For each recursive call on the path (if there are any), argue why the preconditions are satisfied at the time of the recursive call, and that the recursive call occurs on a “smaller” input than the original call. Then you may assume that the postconditions for the recursive call are satisfied when the recursive call terminates. Finally, argue from the last recursive call to the end of the function why the postconditions of the original function call will hold. • For each loop, use a “loop invariant.” We will deal with this in the next section.  We have described the content of an induction proof; by focusing on tracing values in the code, we are isolating the most important thinking involved. But recall that the core of induction is proving a predicate for all natural numbers; thus the final ingredient we need to account for is associating each input with a natural number: its “size.” Usually, this will be very simple: the length of a list, or the value of an input number.
+    questions_and_answers:
+      - question: How do you prove that a recursive function is correct?
+        answer: For each program path from the first line to a return statement, you show that the path terminates and that the postconditions are satisfied when it does.
+      - question: What must you argue for each recursive call on a program path?
+        answer: You must argue that the preconditions are satisfied at the time of the recursive call and that the call is made on a smaller input. Then you may assume the postconditions of the recursive call hold when it terminates.
+      - question: What is usually used as the size of an input in a recursive correctness proof?
+        answer: The size is usually something simple, such as the length of a list or the value of an input number.
+  - context: |
+      A loop invariant is a predicate that is true every time the loop-condition is checked (including the check that terminates the loop). Usually, the predicate will depend on which iteration the loop is on, or more generally, the value(s) of the program variable(s) associated with the loop. For example, in avg, the loop invariant corresponding to our previous intuition is P(i, sum): sum = A[0] + A[1] + ... + A[i-1]. By convention, the empty sum (when i = 0) evaluates to 0. The i and sum in the predicate really correspond to the values of those variables in the code for avg. That is, this predicate is stating a property of these variables in the code.
+      Unfortunately, this loop invariant isn't quite right; what if i > len(A)? Then the sum is not well-defined, since, for example, A[len(A)] is undefined. This can be solved with a common technique for loop invariants: putting bounds on "loop counter" variables, as follows: Inv(i, sum): 0 <= i <= len(A) and sum = A[0] + A[1] + ... + A[i-1]. This ensures that the sum is always well-defined, and has the added benefit of explicitly defining a possible range of values on i. In general, the fewer possible values a variable takes on, the fewer cases you have to worry about in your code.
+      A loop invariant is correct if it is always true at the beginning of every loop iteration, including the loop check that fails, causing the loop to terminate. This is why we allowed i <= len(A) rather than just i < len(A) in the invariant.
+    questions_and_answers:
+      - question: What is a loop invariant?
+        answer: A loop invariant is a predicate that is true every time the loop condition is checked, including the final check that causes the loop to terminate.
+      - question: Why does the loop invariant for avg include the bound 0 <= i <= len(A)?
+        answer: Without the bound, the sum in the invariant would be undefined when i is greater than len(A), since A[len(A)] does not exist. The bound keeps the sum well-defined and limits the possible values of i.
+      - question: Why does the invariant for avg use i <= len(A) instead of i < len(A)?
+        answer: The invariant must also hold at the loop check that fails and ends the loop, and at that point i equals len(A).
+  - context: |
+      How do we prove that loop invariants are correct? The argument is yet another application of induction: • First, we argue that the loop invariant is satisfied when the loop is reached. (This is arrow (1) in the diagram) • Then, we argue that if the loop invariant is satisfied at the beginning of an iteration, then after the loop body executes once (i.e., one loop iteration occurs), the loop invariant still holds. (Arrow (2)) • Finally, after proving that the loop invariant is correct, we show that if the invariant holds when the loop ends, then the postcondition will be satisfied when the program returns. (Arrow (3))
+    questions_and_answers:
+      - question: What is the first step in proving a loop invariant is correct?
+        answer: The first step is to show that the loop invariant is satisfied when the loop is first reached.
+      - question: What must be shown about a single iteration of the loop?
+        answer: You must show that if the loop invariant holds at the beginning of an iteration, it still holds after the loop body executes once.
+      - question: How is a proven loop invariant used to show the postcondition?
+        answer: You show that if the invariant holds when the loop ends, then the postcondition is satisfied when the program returns.
+  - context: |
+      Proof of termination of avg. Even though we’ve already observed that the loop has a natural loop counter variable i, this variable increases with each iteration. Instead, our loop variant will be v = len(A)−i. Let us check that v satisfies the properties (1) and (2): (1) Since at each iteration i increases by 1, and len(A) stays the same, v = len(A)−i decreases by 1 on each iteration. (2) Note that i and len(A) are both always natural numbers. But this alone is not enough to conclude that v ∈N; for example, 3, 5 ∈N but (3−5) / ∈N. But the loop invariant we proved included the predicate 0 ≤i ≤len(A), and because of this we can conclude that len(A)−i ≥0, so len(A)−i ∈N. This is a major reason we include such loop counter bounds on the loop invariant. Since we have established that v is a decreasing, bounded variant for the loop, this loop terminates, and therefore avg terminates (since every other line of code is a simple step that certainly terminates).
+    questions_and_answers:
+      - question: What loop variant is used to prove that the loop in avg terminates?
+        answer: The loop variant is v = len(A) - i.
+      - question: Why is the loop counter i not used directly as the loop variant in avg?
+        answer: The variable i increases with each iteration, but a loop variant must decrease. Using len(A) - i gives a quantity that decreases by 1 each iteration.
+      - question: Why is the loop invariant needed to show that len(A) - i is a natural number?
+        answer: Knowing that i and len(A) are natural numbers is not enough, since the difference of two natural numbers can be negative. The invariant's bound 0 <= i <= len(A) guarantees that len(A) - i is at least 0.
+      
 document:
   repo: https://github.com/<org>/<repo>      # must contain the markdown at the commit below
   commit: <40-character commit SHA>
