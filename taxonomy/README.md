@@ -24,22 +24,17 @@ taxonomy/
 - We use **one** grading skill entry for all topics, because InstructLab needs a minimum number of
   seeds per entry (about 5 at the time of writing) and each person only writes about 3.
 
-## This week's ownership
+## Who owns what
 
-Knowledge topics are split across three people so the cluster and rubric work have clear owners too.
-Sungmin and Ashton refer to the same person.
-
-| Person | Knowledge topic(s) | Other responsibility |
+| Person | Topic (knowledge entry) | Skill seeds (in `data/examples/`) |
 |---|---|---|
-| Josh | `induction`, `recurrences` | Taxonomy consistency; merges taxonomy changes, regenerates the skill file, and runs `ilab taxonomy diff` |
-| Nikita | `regex_languages`, `program_correctness` | Review topic entries for source grounding and question quality |
-| Daniel | `dfa_nfa` | Cluster and InstructLab setup; verify taxonomy diff/generation works in the environment |
-| Ray | — | Rubric lead; contributes to the ethics documents |
-| Sungmin | — | Ethics-document lead |
+| Josh | `induction` | 3 or more, topic `induction` |
+| Daniel | `recurrences` | 3 or more, topic `recurrences` |
+| Ray | `program_correctness` | 3 or more, topic `program_correctness` |
+| Nikita | `regex_languages` | 3 or more, topic `regex_languages` |
+| Ashton | `dfa_nfa` | 3 or more, topic `dfa_nfa` (lighter if the ethics doc is crunching) |
 
-Each knowledge owner is responsible for the topic's `qna.yaml` and `attribution.txt`, subject to source-material permission. Josh coordinates the final taxonomy validation; Daniel owns the cluster/InstructLab setup rather than the `recurrences` topic.
-
-The grading skill still uses validated JSON examples in `data/examples/`, separately from the topic knowledge entries. Coordinate the number and topic distribution of those examples across the team so the generated skill meets the minimum seed count.
+Josh is also **taxonomy owner**: he merges PRs, regenerates the skill file, and runs `ilab taxonomy diff`.
 
 ## Knowledge entry: how to write one
 
