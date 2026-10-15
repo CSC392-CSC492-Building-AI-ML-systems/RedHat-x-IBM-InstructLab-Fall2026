@@ -1,0 +1,21 @@
+version: 3
+created_by: <your-github-username>
+domain: computer_science
+document_outline: |
+  One or two sentences: what this topic covers and which course documents are used.
+seed_examples:
+  - context: |
+      A passage copied from the source markdown (keep it short, well under 500 tokens).
+    questions_and_answers:
+      - question: A question the passage answers.
+        answer: A complete, correct answer grounded in the passage.
+      - question: ...
+        answer: ...
+      - question: ...
+        answer: ...
+  # repeat for 5 contexts total, each with 3 question/answer pairs
+document:
+  repo: https://github.com/<org>/<repo>      # must contain the markdown at the commit below
+  commit: <40-character commit SHA>
+  patterns:
+    - data/sources/csc236/<topic>/*.md
