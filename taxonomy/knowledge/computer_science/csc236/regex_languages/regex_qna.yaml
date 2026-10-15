@@ -1,0 +1,67 @@
+version: 3
+created_by: nikita-n-rudy
+domain: computer_science
+document_outline: |
+  This topic covers the foundational theory of regular languages, including alphabets, strings, language operations (union, concatenation, Kleene star), and regular expressions, based on David Liu's CSC236 course notes.
+seed_examples:
+  - context: |
+      An alphabet $\Sigma$ is a finite set of symbols, e.g., {0,1}, {a, b,...,z}, or $\{0,1,...,9,+,-,x,\div\}$. A string over an alphabet $\Sigma$ is a finite sequence of symbols from $\Sigma$. The empty string "", denoted by $\epsilon$, consists of a sequence of zero symbols from the alphabet. We use the notation $\Sigma^*$ to denote the set of all strings over the alphabet $\Sigma$.
+      The length of a string $w\in\Sigma^*$ is the number of symbols appearing in the string, and is denoted $|w|$.
+      A language L over an alphabet $\Sigma$ is a subset of strings over $\Sigma$: $L\subseteq\Sigma^*$
+    questions_and_answers:
+      - question: How is a string defined in relation to an alphabet?
+        answer: A string over an alphabet $\Sigma$ is a finite sequence of symbols from $\Sigma$[cite: 67].
+      - question: What does the symbol $\epsilon$ represent in formal language theory?
+        answer: The symbol $\epsilon$ represents the empty string, which consists of a sequence of zero symbols from the alphabet[cite: 67].
+      - question: How do you denote and define the length of a string?
+        answer: The length of a string $w \in \Sigma^*$ is defined as the number of symbols appearing in the string and is denoted mathematically as $|w|$[cite: 67].
+      - question: What is the formal definition of a language over an alphabet?
+        answer: A language $L$ over an alphabet $\Sigma$ is a subset of strings over $\Sigma$, which is denoted as $L \subseteq \Sigma^*$[cite: 67].
+  - context: |
+      We define the following three operations for languages $L, M \subset \Sigma^*$:
+      Union: The union of $L$ and $M$ is the language $L \cup M = \{x \in \Sigma^* | x \in L \text{ or } x \in M\}$.
+      Concatenation: The concatenation of $L$ and $M$ is the language $LM = \{xy \in \Sigma^* | x \in L, y \in M\}$.
+      Kleene Star: The star of $L$ is the language $L^* = \{\epsilon\} \cup \{x \in \Sigma^* | \exists w_1, w_2, ..., w_n \in L \text{ such that } x = w_1 w_2 ... w_n, \text{ for some } n\}$.
+    questions_and_answers:
+      - question: What does the concatenation of two languages $L$ and $M$ produce?
+        answer: The concatenation of $L$ and $M$ produces a language $LM$ consisting of all strings $xy$ where $x$ is a string from $L$ and $y$ is a string from $M$[cite: 68].
+      - question: How is the union operation for languages formally defined?
+        answer: The union of languages $L$ and $M$ is defined as $L \cup M = \{x \in \Sigma^* | x \in L \text{ or } x \in M\}$[cite: 68].
+      - question: What strings does the Kleene Star operation on a language $L$ contain?
+        answer: The Kleene Star of $L$ contains the empty string $\epsilon$ as well as all strings that can be formed by concatenating one or more strings from $L$ together[cite: 69].
+  - context: |
+      The set of regular languages over an alphabet $\Sigma$ is defined recursively as follows:
+      - $\emptyset$, the empty set, is a regular language.
+      - $\{\epsilon\}$, the language consisting of only the empty string, is a regular language.
+      - For any symbol $a \in \Sigma$, $\{a\}$ is a regular language.
+      - If $L, M$ are regular languages, then so are $L \cup M$, $LM$, and $L^*$.
+    questions_and_answers:
+      - question: What are the base cases in the recursive definition of regular languages?
+        answer: The base cases are the empty set $\emptyset$, the language containing only the empty string $\{\epsilon\}$, and the language $\{a\}$ for any single symbol $a$ in the alphabet[cite: 69].
+      - question: Which three operations preserve the property of a language being regular?
+        answer: The operations that preserve regularity are union ($L \cup M$), concatenation ($LM$), and the Kleene star ($L^*$)[cite: 69].
+      - question: Is the language containing only the empty string considered a regular language?
+        answer: Yes, the language $\{\epsilon\}$ is explicitly defined as a regular language in the base cases of the recursive definition[cite: 69].
+  - context: |
+      A regular expression (regex) is a pattern-based string representation of a regular language. Given a regular expression $r$, we use $\mathcal{L}(r)$ to denote the language matched (represented) by $r$. Here are the elements of regular expressions: $\emptyset$ is a regex, with $\mathcal{L}(\emptyset)=\emptyset$; $\epsilon$ is a regex, with $\mathcal{L}(\epsilon)=\{\epsilon\}$; and $a$ is a regex with $\mathcal{L}(a)=\{a\}$. Let $r_1, r_2$ be regexes. Then $r_1+r_2$, $r_1r_2$, and $r_1^*$ are regexes.
+    questions_and_answers:
+      - question: What is the primary purpose of a regular expression?
+        answer: A regular expression serves as a pattern-based string representation that matches a specific regular language[cite: 69].
+      - question: What language is matched by the regular expression $\emptyset$?
+        answer: The regular expression $\emptyset$ matches the empty set, meaning it matches no strings at all[cite: 70].
+      - question: How do regular expressions represent the union and concatenation of other regexes?
+        answer: For regular expressions $r_1$ and $r_2$, their union is represented by $r_1+r_2$ and their concatenation is represented by $r_1r_2$[cite: 70].
+  - context: |
+      To interpret this regex, we need to understand precedence rules. By convention, these are identical to the standard arithmetic precedence; thus star has the highest precedence, followed by concatenation, and finally union. Therefore the complete bracketing of this regex is $(01)+(1((0+1)^*))$, but with these precedence rules in place, we only need the brackets around the $(0+1)$.
+    questions_and_answers:
+      - question: What is the order of precedence for operations in regular expressions?
+        answer: The Kleene star operation has the highest precedence, followed by concatenation, and finally the union operation has the lowest precedence[cite: 70].
+      - question: How do the precedence rules of regular expressions compare to mathematical conventions?
+        answer: The precedence rules for regular expressions are identical to standard arithmetic precedence conventions[cite: 70].
+      - question: Why are brackets necessary around the $(0+1)$ expression?
+        answer: Brackets are necessary because the union operation ($+$) has a lower precedence than the Kleene star; without brackets, the star would only apply to the $1$ instead of the entire $(0+1)$ expression[cite: 70].
+document:
+  repo: https://github.com/instructlab/taxonomy
+  commit: <40-character commit SHA>
+  patterns:
+    - data/sources/csc236/regex_languages/*.md
