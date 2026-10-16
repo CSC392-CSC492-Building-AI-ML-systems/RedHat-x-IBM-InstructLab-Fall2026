@@ -1,0 +1,71 @@
+version: 3
+created_by: halper33
+domain: computer_science
+document_outline: |
+  Covers recurrences as taught in CSC236, including recursively defined functions, closed forms, repeated substitution, runtime recurrences for recursive algorithms, and the Master Theorem. Based on the Recursion chapter of David Liu's course notes.
+seed_examples:
+  - context: |
+      A function can be defined recursively by giving its value on one or more base cases and expressing its value on larger inputs in terms of its values on smaller inputs. For example,
+      $$f(n) = \begin{cases} 0, & \text{if } n = 0 \\ f(n-1) + 2n - 1, & \text{if } n \geq 1 \end{cases}$$
+      A recursive definition describes how the values of $f$ relate to each other, even when we don't know the exact values. Its drawback is that a large value, or a symbolic value such as $f(n^2 + 3n)$, can only be computed by first computing the smaller values it depends on. What we would really like is a closed form expression for $f$, one that does not depend on other values of $f$. For the function above, the closed form is $f(n) = n^2$.
+    questions_and_answers:
+      - question: What is a recursively defined function?
+        answer: A function defined by giving its values on one or more base cases and expressing its value on larger inputs in terms of its values on smaller inputs.
+      - question: What is the main drawback of defining a function recursively?
+        answer: Large or symbolic values of the function can only be computed by first computing all the smaller values they depend on.
+      - question: What is a closed form expression, and what is the closed form of $f$ where $f(0) = 0$ and $f(n) = f(n-1) + 2n - 1$ for $n \geq 1$?
+        answer: A closed form expression gives the value of the function directly, without referring to other values of the function. For this $f$, the closed form is $f(n) = n^2$.
+  - context: |
+      A triomino is a tile made of three squares in the shape of an L. Let $f(n)$ be the number of ways to tile a $3 \times n$ grid with triominoes, for $n \geq 1$. No triomino fits in a $3 \times 1$ grid, so $f(1) = 0$, and a $3 \times 2$ grid can be tiled in exactly 2 ways, so $f(2) = 2$. For $n > 2$, there are two triomino placements that cover the top left square, and once one is chosen, only one placement covers the bottom left square. Together they tile the leftmost $3 \times 2$ block, and the remaining $3 \times (n-2)$ grid can be tiled in $f(n-2)$ ways. Multiplying the independent choices gives
+      $$f(n) = \begin{cases} 0, & \text{if } n = 1 \\ 2, & \text{if } n = 2 \\ 2f(n-2), & \text{if } n > 2 \end{cases}$$
+      Two base cases are needed because $f(n)$ depends on $f(n-2)$. To guess a closed form, we use repeated substitution and expand the definition until a pattern appears, giving $f(n) = 2f(n-2) = 4f(n-4) = \cdots = 2^k f(n-2k)$. If $n = 2m+1$ is odd, $f(n) = 2^m f(1) = 0$. If $n = 2m$ is even, $f(n) = 2^{m-1} f(2) = 2^m = 2^{n/2}$. The $\cdots$ is not a proof, so the closed form must then be proven by complete induction, since the induction hypothesis is needed for $n-2$ rather than $n-1$.
+    questions_and_answers:
+      - question: What recurrence gives the number of ways $f(n)$ to tile a $3 \times n$ grid with triominoes?
+        answer: $f(1) = 0$, $f(2) = 2$, and $f(n) = 2f(n-2)$ for $n > 2$.
+      - question: Why does the triomino tiling recurrence need two base cases?
+        answer: Because $f(n)$ is defined in terms of $f(n-2)$. With only one base case, computing $f(2)$ would require $f(0)$, which is undefined.
+      - question: Does repeated substitution prove that a closed form is correct?
+        answer: No. Repeated substitution is a way to guess the closed form by finding a pattern, and the guess must then be proven by induction. For the triomino recurrence, complete induction is used because the hypothesis is needed for $n-2$.
+  - context: |
+      Consider the recursive function `fact(n)`, which returns 1 when $n = 1$ and otherwise returns `n * fact(n-1)`. Let $T(n)$ be its running time on input $n$ in the worst case. Rather than counting exact steps, we use constants. When $n = 1$, only the if check and the return run, so $T(1) = c$ for some constant $c$. When $n > 1$, we analyse the recursive call and the rest of the function separately. The rest of the function (the if check, the multiplication by $n$, and the return) takes a constant number of steps $d$. The recursive call `fact(n-1)` takes $T(n-1)$ steps, by the definition of $T$. This gives
+      $$T(n) = \begin{cases} c, & \text{if } n = 1 \\ T(n-1) + d, & \text{if } n > 1 \end{cases}$$
+      Repeated substitution gives $T(n) = T(n-1) + d = T(n-2) + 2d = T(n-3) + 3d = \cdots = T(1) + (n-1)d = c + (n-1)d$. After proving this closed form by induction, the last step is to turn it into an asymptotic bound. Since $c$ and $d$ are constants, $T(n) = \mathcal{O}(n)$.
+    questions_and_answers:
+      - question: What recurrence describes the running time $T(n)$ of the recursive function fact in the worst case?
+        answer: $T(1) = c$, and $T(n) = T(n-1) + d$ for $n > 1$, where $c$ and $d$ are constants.
+      - question: How do you set up a recurrence for the running time of a recursive function?
+        answer: Analyse the recursive calls and the rest of the function separately. The work outside the recursive calls contributes a cost such as a constant $d$, and each recursive call on a smaller input contributes $T$ of that input size.
+      - question: What closed form and asymptotic bound does repeated substitution give for the running time of fact?
+        answer: The closed form is $T(n) = c + (n-1)d$, and since $c$ and $d$ are constants, $T(n) = \mathcal{O}(n)$.
+  - context: |
+      The function `bin_search(A, x)` returns whether $x$ is in the sorted list $A$. Let $n$ be the length of $A$. If $n = 0$ or $n = 1$, it runs in constant time. Otherwise, it sets $m = \lfloor n/2 \rfloor$ and makes exactly one recursive call, on either the first part or the second part of the list. In this course, list slicing is treated as constant time, so the work outside the recursive call is a constant $d$. The recursive call is on a list of size $\lfloor n/2 \rfloor$ or $\lceil n/2 \rceil$. We ignore floors and ceilings by assuming the input size is a power of 2, so the list always divides evenly. This gives
+      $$T(n) = \begin{cases} c, & \text{if } n \leq 1 \\ T\left(\frac{n}{2}\right) + d, & \text{if } n > 1 \end{cases}$$
+      Assuming $n = 2^k$, repeated substitution gives $T(n) = T(n/2) + d = T(n/4) + 2d = \cdots = T(n/2^k) + kd = T(1) + kd = c + kd$. This looks constant, but $k$ depends on $n$. Since $n = 2^k$, $k = \log_2 n$, so $T(n) = c + d \log_2 n$ and $T(n) = \mathcal{O}(\log n)$.
+    questions_and_answers:
+      - question: What recurrence describes the running time of binary search on a list of length $n$?
+        answer: $T(n) = c$ for $n \leq 1$, and $T(n) = T(n/2) + d$ for $n > 1$.
+      - question: How are floors and ceilings handled when writing recurrences in CSC236?
+        answer: They are ignored. We assume input sizes are nice, for example powers of 2, so recursive calls divide the input evenly. This does not change the asymptotic result.
+      - question: Why is the closed form $T(n) = c + kd$ for binary search not constant time?
+        answer: Because $k$ depends on $n$. With $n = 2^k$, $k = \log_2 n$, so $T(n) = c + d \log_2 n$, which is $\mathcal{O}(\log n)$.
+  - context: |
+      Many recursive algorithms have running times of the special form
+      $$T(n) = aT\left(\frac{n}{b}\right) + f(n),$$
+      where $a \in \mathbb{Z}^+$ and $b > 1$ are constants and $f$ is a function from $\mathbb{N}$ to $\mathbb{R}^+$. Here $a$ is the number of recursive calls, $b$ is the factor by which the input size shrinks in each call, and $f(n)$ is the cost of the work outside the recursive calls. For example, mergesort makes two recursive calls on halves of the list and merges the results in linear time, so $T(n) = 2T(n/2) + dn$.
+      The Master Theorem gives an asymptotic bound for this form directly. If $f(n) = \Theta(n^k)$ for some $k \geq 0$, there are three cases.
+      1. If $k = \log_b a$, then $T(n) = \mathcal{O}(n^k \log n)$.
+      2. If $k < \log_b a$, then $T(n) = \mathcal{O}(n^{\log_b a})$.
+      3. If $k > \log_b a$, then $T(n) = \mathcal{O}(n^k)$.
+      For mergesort, $a = b = 2$, so $\log_2 2 = 1$, and $dn = \Theta(n^1)$, so $k = 1$. Case 1 applies, and $T(n) = \mathcal{O}(n \log n)$.
+    questions_and_answers:
+      - question: In the recurrence $T(n) = aT(n/b) + f(n)$, what do $a$, $b$, and $f(n)$ represent?
+        answer: $a$ is the number of recursive calls, $b$ is the factor by which the input size shrinks in each call, and $f(n)$ is the cost of the work outside the recursive calls.
+      - question: What does the Master Theorem conclude when $f(n) = \Theta(n^k)$ and $k < \log_b a$?
+        answer: It concludes that $T(n) = \mathcal{O}(n^{\log_b a})$.
+      - question: Which case of the Master Theorem applies to mergesort, and what bound does it give?
+        answer: For mergesort, $T(n) = 2T(n/2) + dn$, so $a = b = 2$ and $k = 1 = \log_2 2$. Case 1 applies, giving $T(n) = \mathcal{O}(n \log n)$.
+document:
+  repo: https://github.com/<org>/<repo>      # must contain the markdown at the commit below
+  commit: <40-character commit SHA>
+  patterns:
+    - data/sources/csc236/recurrences/*.md
