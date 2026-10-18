@@ -62,6 +62,6 @@ seed_examples:
         answer: Brackets are necessary because the union operation ($+$) has a lower precedence than the Kleene star; without brackets, the star would only apply to the $1$ instead of the entire $(0+1)$ expression.
 document:
   repo: https://github.com/CSC392-CSC492-Building-AI-ML-systems/RedHat-x-IBM-InstructLab-Fall2026.git  
-  commit: 8fa23cacb001703dc052adea3c1296294817da07
+  commit: c2152b42d5a896cd5e7554d509a9feaa6d352ce5
   patterns:
     - data/sources/csc236/regex_languages/*.md
