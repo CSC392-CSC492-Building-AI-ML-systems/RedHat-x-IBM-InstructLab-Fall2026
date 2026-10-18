@@ -1,0 +1,4 @@
+Title of work: Introduction to the Theory of Computation: Lecture Notes and Exercises for CSC236 (pp. 72–84)
+Link to work: Not provided
+License of the work: Not specified
+Creator names: David Liu and Daniel Zingaro (UTM edits)
