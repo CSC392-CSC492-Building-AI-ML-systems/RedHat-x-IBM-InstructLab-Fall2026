@@ -1,4 +1,4 @@
-Title of work: CSC236 tutorial solutions
-Link to work: <course page or repo link>
-License of the work: Course material used with permission of <professor name> on <date>
-Creator names: <instructors / TAs who wrote it>
+Title of work: David Liu Theory Of Computation
+Link to work: 
+License of the work: David Zingaro and David Liu
+Creator names: David Zingaro and David Liu

@@ -1,6 +1,6 @@
 version: 3
 created_by: Raynard02
-domain: program_correctness
+domain: computer_science
 document_outline: |
   One or two sentences: what this topic covers and which course documents are used.
 seed_examples:
@@ -43,7 +43,7 @@ seed_examples:
       - question: How is a proven loop invariant used to show the postcondition?
         answer: You show that if the invariant holds when the loop ends, then the postcondition is satisfied when the program returns.
   - context: |
-      Proof of termination of avg. Even though we’ve already observed that the loop has a natural loop counter variable i, this variable increases with each iteration. Instead, our loop variant will be v = len(A)−i. Let us check that v satisfies the properties (1) and (2): (1) Since at each iteration i increases by 1, and len(A) stays the same, v = len(A)−i decreases by 1 on each iteration. (2) Note that i and len(A) are both always natural numbers. But this alone is not enough to conclude that v ∈N; for example, 3, 5 ∈N but (3−5) / ∈N. But the loop invariant we proved included the predicate 0 ≤i ≤len(A), and because of this we can conclude that len(A)−i ≥0, so len(A)−i ∈N. This is a major reason we include such loop counter bounds on the loop invariant. Since we have established that v is a decreasing, bounded variant for the loop, this loop terminates, and therefore avg terminates (since every other line of code is a simple step that certainly terminates).
+      Proof of termination of avg. Even though we’ve already observed that the loop has a natural loop counter variable i, this variable increases with each iteration. Instead, our loop variant will be v = len(A)−i. Let us check that v satisfies the properties (1) and (2): (1) Since at each iteration i increases by 1, and len(A) stays the same, v = len(A)−i decreases by 1 on each iteration. (2) Note that i and len(A) are both always natural numbers. But this alone is not enough to conclude that v is in N; for example, 3, 5 ∈N but (3−5) in not in N. But the loop invariant we proved included the predicate 0 <= i <= len(A), and because of this we can conclude that len(A)−i ≥0, so len(A)−i ∈N. This is a major reason we include such loop counter bounds on the loop invariant. Since we have established that v is a decreasing, bounded variant for the loop, this loop terminates, and therefore avg terminates (since every other line of code is a simple step that certainly terminates).
     questions_and_answers:
       - question: What loop variant is used to prove that the loop in avg terminates?
         answer: The loop variant is v = len(A) - i.
