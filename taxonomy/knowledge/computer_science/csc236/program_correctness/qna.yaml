@@ -53,7 +53,7 @@ seed_examples:
         answer: Knowing that i and len(A) are natural numbers is not enough, since the difference of two natural numbers can be negative. The invariant's bound 0 <= i <= len(A) guarantees that len(A) - i is at least 0.
       
 document:
-  repo: https://github.com/<org>/<repo>      # must contain the markdown at the commit below
-  commit: <40-character commit SHA>
+  repo: https://github.com/CSC392-CSC492-Building-AI-ML-systems/RedHat-x-IBM-InstructLab-Fall2026.git  
+  commit: 8fa23cacb001703dc052adea3c1296294817da07
   patterns:
-    - data/sources/csc236/<topic>/*.md
+    - data/sources/csc236/program_correctness/*.md

@@ -65,7 +65,7 @@ seed_examples:
       - question: Which case of the Master Theorem applies to mergesort, and what bound does it give?
         answer: For mergesort, $T(n) = 2T(n/2) + dn$, so $a = b = 2$ and $k = 1 = \log_2 2$. Case 1 applies, giving $T(n) = \mathcal{O}(n \log n)$.
 document:
-  repo: https://github.com/<org>/<repo>      # must contain the markdown at the commit below
-  commit: <40-character commit SHA>
+  repo: https://github.com/CSC392-CSC492-Building-AI-ML-systems/RedHat-x-IBM-InstructLab-Fall2026.git  
+  commit: 8fa23cacb001703dc052adea3c1296294817da07
   patterns:
     - data/sources/csc236/recurrences/*.md

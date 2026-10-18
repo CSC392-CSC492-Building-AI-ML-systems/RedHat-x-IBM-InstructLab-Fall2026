@@ -46,9 +46,9 @@ seed_examples:
       A regular expression (regex) is a pattern-based string representation of a regular language. Given a regular expression $r$, we use $\mathcal{L}(r)$ to denote the language matched (represented) by $r$. Here are the elements of regular expressions: $\emptyset$ is a regex, with $\mathcal{L}(\emptyset)=\emptyset$; $\epsilon$ is a regex, with $\mathcal{L}(\epsilon)=\{\epsilon\}$; and $a$ is a regex with $\mathcal{L}(a)=\{a\}$. Let $r_1, r_2$ be regexes. Then $r_1+r_2$, $r_1r_2$, and $r_1^*$ are regexes.
     questions_and_answers:
       - question: What is the primary purpose of a regular expression?
-        answer: A regular expression serves as a pattern-based string representation that matches a specific regular language[cite: 69].
+        answer: A regular expression serves as a pattern-based string representation that matches a specific regular language
       - question: What language is matched by the regular expression $\emptyset$?
-        answer: The regular expression $\emptyset$ matches the empty set, meaning it matches no strings at all[cite: 70].
+        answer: The regular expression $\emptyset$ matches the empty set, meaning it matches no strings at all.
       - question: How do regular expressions represent the union and concatenation of other regexes?
         answer: For regular expressions $r_1$ and $r_2$, their union is represented by $r_1+r_2$ and their concatenation is represented by $r_1r_2$.
   - context: |
@@ -61,7 +61,7 @@ seed_examples:
       - question: Why are brackets necessary around the $(0+1)$ expression?
         answer: Brackets are necessary because the union operation ($+$) has a lower precedence than the Kleene star; without brackets, the star would only apply to the $1$ instead of the entire $(0+1)$ expression.
 document:
-  repo: https://github.com/instructlab/taxonomy
-  commit: <40-character commit SHA>
+  repo: https://github.com/CSC392-CSC492-Building-AI-ML-systems/RedHat-x-IBM-InstructLab-Fall2026.git  
+  commit: 8fa23cacb001703dc052adea3c1296294817da07
   patterns:
     - data/sources/csc236/regex_languages/*.md
