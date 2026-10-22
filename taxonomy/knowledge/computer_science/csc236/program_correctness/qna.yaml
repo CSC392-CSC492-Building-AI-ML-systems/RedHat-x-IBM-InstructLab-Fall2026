@@ -54,6 +54,6 @@ seed_examples:
       
 document:
   repo: https://github.com/CSC392-CSC492-Building-AI-ML-systems/RedHat-x-IBM-InstructLab-Fall2026.git  
-  commit: c2152b42d5a896cd5e7554d509a9feaa6d352ce5
+  commit: e4cd95b34000cf94c481265a6124ab81e2531669
   patterns:
     - data/sources/csc236/program_correctness/*.md
