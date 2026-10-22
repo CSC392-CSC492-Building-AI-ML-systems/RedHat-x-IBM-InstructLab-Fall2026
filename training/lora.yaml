@@ -1,0 +1,20 @@
+# Settings for one LoRA fine-tuning run of Qwen3.8-27B.
+# For a new run, copy this file, change what you need, and give it a new output folder.
+
+base_model: models/Qwen3.8-27B
+data: data/generated/train.jsonl    # the chat messages file InstructLab made
+output: models/adapters/lora-v1     # where the trained adapter is saved (not in git)
+
+# false trains on the full 16 bit model. true is QLoRA, which shrinks the
+# model to 4 bits and uses far less memory. Switch to true if it runs out of memory.
+load_in_4bit: false
+
+# Starting values from Unsloth's Qwen3.8 guide. We'll tune them after the first run.
+lora_rank: 16
+lora_alpha: 16
+max_seq_length: 2048
+epochs: 2
+learning_rate: 2.0e-4
+batch_size: 1
+gradient_accumulation_steps: 4
+seed: 3407
