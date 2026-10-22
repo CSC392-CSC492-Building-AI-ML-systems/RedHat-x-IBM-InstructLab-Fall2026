@@ -1,22 +1,104 @@
 version: 3
-created_by: <your-github-username>
+created_by: jeodn
 domain: computer_science
 document_outline: |
-  Covers mathematical induction as taught in CSC236, including simple induction,
-  strong induction, and structural induction on recursive definitions.
+  Covers mathematical induction as taught in CSC236 (Introduction to the Theory of Computation), including simple induction, strong induction, and structural induction on recursive definitions.
 seed_examples:
   - context: |
-      <Paste a short passage (< 500 tokens) from data/sources/csc236/induction/*.md>
+      A predicate is a parametrized logical statement; that is, it can be viewed as a function that takes in one or more arguments and outputs either True or False. Every predicate has a domain: the set of its possible input values. Predicates abstract away the details of complex statements, giving us a precise way to formulate mathematical problems.
+
+      Some examples of predicates include: EV(n) : n is even. GR(x, y) : x > y. FROSH(a) : a is a first-year university student.
+      
+      The Principle of Simple Induction is a proof technique that is used to establish that a predicate P(n) is true all integers greater than some specified natural number b. To prove that a predicate P(n) is true for all natural numbers n, we use the following chain of reasoning analogous to falling dominoes:
+      (1) Base case: Prove that P(b) is true, for some starting natural number b.
+      (2) Induction step: Devise an induction hypothesis, which is that P(k) for some k >= b. Suppose the induction hypothesis is true. Prove that if P(k) is true then P(k+1) also holds.
+      (3) Conclusion: We can then conclude that for all natural numbers n greater than b, P(n) is true.
+      
+      Formally, the Principle of Simple Induction is expressed symbolically as:
+      (P(0) and (forall k in N, P(k) => P(k+1))) => forall n in N, P(n).
     questions_and_answers:
-      - question: <Question answerable from the context above.>
-        answer: <Complete, correct answer grounded in the passage.>
-      - question: <Question 2>
-        answer: <Answer 2>
-      - question: <Question 3>
-        answer: <Answer 3>
+      - question: What is a predicate and what is its domain?
+        answer: A predicate is a parametrized logical statement (or a function taking arguments that outputs True or False), and its domain is the set of its possible input values.
+      - question: What two obligations must be established in a proof by simple mathematical induction?
+        answer: You must establish the base case (showing P(0) is true) and the induction step (showing that for an arbitrary natural number k, assuming P(k) holds implies P(k+1) holds).
+      - question: What is the formal statement of the Principle of Simple Induction?
+        answer: (P(0) and (forall k in N, P(k) => P(k+1))) => forall n in N, P(n)
   # Add 4 more context blocks (5 total), each with 3 Q&A pairs.
+  - context: |
+      Problem: Prove that for all n >= 1, any 2^n-by-2^n chessboard with one corner missing can be tiled with triominoes (three-square L-shaped figures).
+      
+      Proof:
+      Base Case: n = 1. A 2-by-2 chessboard with one corner missing is identical in shape to a single triomino, so it can be tiled.
+      Induction Step: Let k >= 1 and assume the Induction Hypothesis that every 2^k-by-2^k chessboard with one corner missing can be tiled with triominoes.
+      Consider a 2^(k+1)-by-2^(k+1) board with one corner missing. Divide it into four quarters, each of size 2^k-by-2^k. Exactly one quarter contains the missing corner, which can be tiled by the induction hypothesis. Next, place a single triomino in the center covering one corner of each of the remaining three quarters. Now, each of those three quarters also has one corner covered (missing), and by applying the induction hypothesis to each, all can be tiled.
+    questions_and_answers:
+      - question: Why is the base case set to n = 1 instead of n = 0 in the triomino tiling proof?
+        answer: The problem statement only claims the property holds for n >= 1; at n = 1, the 2-by-2 board missing a corner directly matches the shape of one triomino.
+      - question: How is a 2^(k+1)-by-2^(k+1) chessboard decomposed in the induction step?
+        answer: It is divided into four equal quarters, each being a 2^k-by-2^k chessboard.
+      - question: How does the proof enable using the induction hypothesis on the three quarters that did not originally have a missing corner?
+        answer: A single triomino is placed in the center of the board to cover exactly one corner in each of the other three quarters, allowing the induction hypothesis to apply to all of them.
+
+  - context: |
+      Sometimes, a problem of size k+1 cannot be reduced by just 1, such as factoring numbers into primes. This makes it difficult or impossible to use Simple Induction. Instead, a more powerful (complete) approach is called Complete Induction.
+      In Simple Induction, when proving P(k+1), we only assume P(k). In Complete Induction, we retain all previous statements and assume that P(0), P(1), ..., P(k) are all true.
+      The Principle of Complete Induction is stated as:
+      (P(0) and (forall k, (P(0) and P(1) and ... and P(k)) => P(k+1))) => forall n, P(n).
+      
+      Example Theorem: Every natural number greater than 1 has a prime factorization.
+      1. Base Case: n = 2 is prime, so it is a product of one prime (itself).
+      2. Induction Step: Let k >= 2 and assume for all 2 <= i <= k that P(i) holds. For k+1, if k+1 is prime, P(k+1) holds. If k+1 is composite, k+1 = ab for integers 2 <= a, b <= k. By the induction hypothesis, both a and b have prime factorizations; multiplying these gives the prime factorization of k+1.
+    questions_and_answers:
+      - question: What makes the induction hypothesis of complete induction different from that of simple induction?
+        answer: Instead of assuming only P(k) holds, complete induction assumes that all previous cases P(0), P(1), ..., P(k) hold to prove P(k+1).
+      - question: Why is complete induction necessary rather than simple induction when proving the existence of prime factorizations?
+        answer: The prime factorization of k+1 does not reduce to that of k (consecutive numbers can have completely different factors), but factors into smaller components a and b where 2 <= a, b <= k.
+      - question: How is the induction hypothesis applied to k + 1 in the composite case?
+        answer: Because k + 1 = ab with factors satisfying 2 <= a, b <= k, the induction hypothesis ensures both a and b can be factored into primes, which combine to form the prime factorization of k + 1.
+
+  - context: |
+      Sometimes, it is not immediately useful to induct over natural numbers. For example, we would like to show a property holds for all elements of a recursively-defined set.
+      
+      First, we need a definition of recursively-defined sets. Sets can be defined recursively using base rules (simplest elements) and recursive rules.
+      For example, the set of non-empty binary trees is defined as:
+      - Base rule: A single node is a non-empty binary tree.
+      - Recursive rule 1: If T1 and T2 are non-empty binary trees, attaching a new root r to
+        the roots of T1 and T2 creates a non-empty binary tree.
+      - Recursive rule 2: If T1 is a non-empty binary tree, attaching a new root r to the root
+        of T1 (to the left or right) creates a non-empty binary tree.
+      
+      Structural induction proves a property P(T) holds for all elements of a recursively defined set by showing:
+      (1) Base Case: P holds for all base elements (e.g., a single node has 1 node and 0 edges, so V = E + 1).
+      (2) Induction Step: For each recursive rule, assuming P holds for the components, P holds for the newly constructed tree.
+    questions_and_answers:
+      - question: What is the base element in the recursive definition of non-empty binary trees?
+        answer: The base element is a single node.
+      - question: What is the core methodology of a structural induction proof?
+        answer: Showing that a property holds for the base elements of a set and is preserved under every recursive construction rule used to generate new elements.
+      - question: Why does the structural induction step for non-empty binary trees require two separate parts?
+        answer: Because there are two distinct recursive construction rules: one joins two subtrees to a new root and the other joins a single subtree to a new root.
+
+  - context: |
+      Induction can prove equivalence between recursive and non-recursive definitions.
+      Consider set S subset of N x N defined recursively by:
+      - (0,0) in S
+      - If (a,b) in S, then (a+1, b+1) in S and (a+3, b) in S.
+      And set S' = {(x,y) in N x N | x >= y and 3 | (x - y)}.
+      
+      To prove S = S', we show two way inclusion:
+      Part 1 (S subset of S'): Use structural induction on the construction of S. The base case (0,0) satisfies 0 >= 0 and 3 | 0, meaning (0,0) is in both S and S'. Now suppose (a,b) is in both S and S'. Consider the constructors of S. For (a+1, b+1), (a+1) - (b+1) = a - b, which by hypothesis is assumed to be in S'. For (a+3, b), (a+3) - b = (a - b) + 3, which is also divisible by 3 according to the induction hypothesis.
+      Part 2 (S' subset of S): Associate each pair (x,y) with natural number n = x + y, and use complete induction on n to show every pair in S' is in S.
+    questions_and_answers:
+      - question: What strategy is used to show the two sets S and S' are equivalent?
+        answer: The proof is split in two directions: showing S is a subset of S' using structural induction, and showing S' is a subset of S using complete induction.
+      - question: How can induction on natural numbers be used to prove a property about pairs (x, y) in S'?
+        answer: By mapping each pair (x, y) to a single natural number, specifically their sum n = x + y, and applying complete induction on n.
+      - question: In the structural induction step showing S subset of S', why does (a+1, b+1) satisfy the divisibility condition?
+        answer: Because (a + 1) - (b + 1) simplifies to a - b, which is divisible by 3 by the induction hypothesis.
+
+  
 document:
-  repo: https://github.com/<org>/<repo>      # must contain the markdown at the commit below
-  commit: <40-character commit SHA>
+  repo: https://github.com/CSC392-CSC492-Building-AI-ML-systems/RedHat-x-IBM-InstructLab-Fall2026.git       # must contain the markdown at the commit below
+  commit: e98cb369da53290b0dad10d607590b40880f69c1
   patterns:
-    - data/sources/csc236/induction/*.md
+    - knowledge-docs/liu-theory-of-computation.pdf
