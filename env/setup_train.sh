@@ -1,8 +1,9 @@
 #!/bin/bash
 # Build the training environment (Unsloth) in env/train/.venv on Fir.
 # Run from a login node:  bash env/setup_train.sh
-# Everything comes from Fir's own package collection.
-module load python/3.13
+# Everything comes from Fir's own package collection. pyarrow can't be
+# installed with pip there, so it comes from Fir's arrow module instead.
+module load gcc arrow/25.0.0 python/3.13
 set -e
 cd "$(dirname "$0")/.."
 if [ -d env/train/.venv ]; then
