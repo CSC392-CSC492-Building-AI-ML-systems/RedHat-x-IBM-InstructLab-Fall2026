@@ -13,8 +13,9 @@
 # The log (in your home folder) shows the training loss as it goes.
 
 # The arrow module provides pyarrow, and the training code compiles some GPU
-# code when it starts, so it needs CUDA too.
-module load gcc arrow/25.0.0 python/3.13 cuda/13.2
+# code when it starts, so it needs CUDA too. The PyTorch in this environment
+# was built for CUDA 12.9, so the CUDA module has to match it.
+module load gcc arrow/25.0.0 python/3.13 cuda/12.9
 set -e
 cd "$SLURM_SUBMIT_DIR"
 source env/train/.venv/bin/activate
