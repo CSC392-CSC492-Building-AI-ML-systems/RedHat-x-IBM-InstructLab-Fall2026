@@ -51,9 +51,9 @@ seed_examples:
         answer: The variable i increases with each iteration, but a loop variant must decrease. Using len(A) - i gives a quantity that decreases by 1 each iteration.
       - question: Why is the loop invariant needed to show that len(A) - i is a natural number?
         answer: Knowing that i and len(A) are natural numbers is not enough, since the difference of two natural numbers can be negative. The invariant's bound 0 <= i <= len(A) guarantees that len(A) - i is at least 0.
-      
+
 document:
-  repo: https://github.com/CSC392-CSC492-Building-AI-ML-systems/RedHat-x-IBM-InstructLab-Fall2026.git  
+  repo: https://github.com/CSC392-CSC492-Building-AI-ML-systems/RedHat-x-IBM-InstructLab-Fall2026.git
   commit: e4cd95b34000cf94c481265a6124ab81e2531669
   patterns:
     - data/sources/csc236/program_correctness/*.md
