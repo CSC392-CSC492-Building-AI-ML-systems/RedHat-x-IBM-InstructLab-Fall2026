@@ -76,7 +76,7 @@ seed_examples:
       - question: What is the core methodology of a structural induction proof?
         answer: Showing that a property holds for the base elements of a set and is preserved under every recursive construction rule used to generate new elements.
       - question: Why does the structural induction step for non-empty binary trees require two separate parts?
-        answer: Because there are two distinct recursive construction rules: one joins two subtrees to a new root and the other joins a single subtree to a new root.
+        answer: Because there are two distinct recursive construction rules. One joins two subtrees to a new root and the other joins a single subtree to a new root.
 
   - context: |
       Induction can prove equivalence between recursive and non-recursive definitions.
@@ -90,7 +90,7 @@ seed_examples:
       Part 2 (S' subset of S): Associate each pair (x,y) with natural number n = x + y, and use complete induction on n to show every pair in S' is in S.
     questions_and_answers:
       - question: What strategy is used to show the two sets S and S' are equivalent?
-        answer: The proof is split in two directions: showing S is a subset of S' using structural induction, and showing S' is a subset of S using complete induction.
+        answer: The proof is split in two directions. First, showing S is a subset of S' using structural induction, then showing S' is a subset of S using complete induction.
       - question: How can induction on natural numbers be used to prove a property about pairs (x, y) in S'?
         answer: By mapping each pair (x, y) to a single natural number, specifically their sum n = x + y, and applying complete induction on n.
       - question: In the structural induction step showing S subset of S', why does (a+1, b+1) satisfy the divisibility condition?
