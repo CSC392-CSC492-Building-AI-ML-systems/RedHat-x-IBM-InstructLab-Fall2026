@@ -87,15 +87,15 @@ seed_examples:
   - context: |
     You are evaluating a student's submission for Q2(a): "Prove that every natural number n >= 8 can be written as n = 3a + 5b for some natural numbers a and b. Use PCI. In the induction step, obtain P(k+1) from P(k-2)."
     
-    General Rules: Mark in quarter points[cite: 96]. Missing predicate or unlabelled parts costs at most 0.5 per proof[cite: 96].
+    General Rules: Mark in quarter points. Missing predicate or unlabelled parts costs at most 0.5 per proof.
     
     Rubric (Total 5 pts):
-    - Predicate and domain: 0.5 pts[cite: 98].
-    - Base cases: 1.0 pt (0.5 off per missing case, not below 0). Requires 8, 9, 10[cite: 98].
-    - I.H.: 0.5 pts[cite: 98].
-    - I.S.: 1.5 pts total. Observation 8 <= k-2 <= k (0.5); I.H. applied to k-2 (0.5); k+1 = 3(a+1) + 5b (0.5)[cite: 98].
-    - Conclusion: 0.5 pts[cite: 98].
-    - Deductions: A step stated for k >= 8 while using P(k-2) appeals to P(6) and P(7): minus 0.5[cite: 98]. Simple-induction I.H. followed by use of P(k-2): minus 1.0[cite: 98]. Correct proof with another step shape: capped at 3.0 pts[cite: 98].
+    - Predicate and domain: 0.5 pts.
+    - Base cases: 1.0 pt (0.5 off per missing case, not below 0). Requires 8, 9, 10.
+    - I.H.: 0.5 pts.
+    - I.S.: 1.5 pts total. Observation 8 <= k-2 <= k (0.5); I.H. applied to k-2 (0.5); k+1 = 3(a+1) + 5b (0.5).
+    - Conclusion: 0.5 pts.
+    - Deductions: A step stated for k >= 8 while using P(k-2) appeals to P(6) and P(7): minus 0.5. Simple-induction I.H. followed by use of P(k-2): minus 1.0. Correct proof with another step shape: capped at 3.0 pts.
   questions_and_answers:
     - question: |
         Student Submission:
