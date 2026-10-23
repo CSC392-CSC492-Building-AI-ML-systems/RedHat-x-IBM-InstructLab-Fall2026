@@ -1,0 +1,55 @@
+{
+  "rubric_id": "induction_v1",
+  "criteria": [
+    {
+      "id": "base_case",
+      "name": "Base case",
+      "levels": {
+        "full": "States the starting value and correctly verifies the claim for it.",
+        "partial": "Verifies the claim for a valid starting value but makes a minor error in the check.",
+        "minimal": "Names a base case but does not verify the claim for it.",
+        "none": "No base case is given."
+      }
+    },
+    {
+      "id": "induction_hypothesis",
+      "name": "Induction hypothesis",
+      "levels": {
+        "full": "Explicitly assumes the claim holds for an arbitrary k (or for all values up to k in strong induction) without assuming the k+1 case.",
+        "partial": "Assumes the claim for k but leaves k vague, or states the assumption incompletely.",
+        "minimal": "The hypothesis is only implied by later steps and never stated.",
+        "none": "No hypothesis is given, or the proof assumes what it must prove."
+      }
+    },
+    {
+      "id": "inductive_step",
+      "name": "Inductive step",
+      "levels": {
+        "full": "Derives the k+1 case from the hypothesis with every step correct and justified.",
+        "partial": "Uses the right approach but has a gap, an unjustified step, or a small algebraic error.",
+        "minimal": "Attempts the step but the reasoning is mostly invalid or does not use the hypothesis.",
+        "none": "No inductive step, or the step is entirely invalid."
+      }
+    },
+    {
+      "id": "conclusion",
+      "name": "Conclusion",
+      "levels": {
+        "full": "Concludes that the claim holds for all n in the stated domain and cites the principle of induction.",
+        "partial": "Concludes the claim holds but omits the domain or does not cite induction.",
+        "minimal": "Gives only a vague closing statement such as 'so it works'.",
+        "none": "No conclusion is given."
+      }
+    },
+    {
+      "id": "rigor_notation",
+      "name": "Rigor and notation",
+      "levels": {
+        "full": "Variables are defined, notation is consistent, and the proof is easy to follow.",
+        "partial": "Has minor notation inconsistencies or one undefined variable, but the meaning is clear.",
+        "minimal": "Has frequent notation errors or undefined symbols that make parts hard to follow.",
+        "none": "Notation is so unclear or inconsistent that the proof cannot be followed."
+      }
+    }
+  ]
+}

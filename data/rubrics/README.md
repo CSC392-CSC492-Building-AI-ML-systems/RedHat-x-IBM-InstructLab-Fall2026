@@ -15,3 +15,12 @@ The rubric lead should:
 Ray also contributes to the ethics documents, with Sungmin (also called Ashton) leading that work. Josh and Nikita own multiple knowledge topics, while Daniel owns one topic alongside cluster and InstructLab setup; see [taxonomy/README.md](../taxonomy/README.md).
 
 The model grades against these files, so once test answers have been written against a rubric, don't change it without updating and rechecking the affected test answers. Part of milestone 1.
+
+## Rubric
+rubric_induction_v1.json contains a minimal induction problem rubric for our usage.
+
+Usage: The same induction rubric can be used in different types of problem examples. It is the job of the problem example to connect a specific class of problem (e.g. sum proof vs divisibility proof) to the abstracted induction proof structure. 
+
+Note on YAML: Writing a vertical bar (|) before a multiline string tells YAML to treat it as a single multiline string. This allows the use of colons in a rubric. 
+
+Note on grading output format: This should probably be checked.

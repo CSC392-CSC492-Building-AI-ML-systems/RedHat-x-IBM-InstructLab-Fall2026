@@ -1,0 +1,109 @@
+version: 2
+task_description: >
+  Grade a student's induction proof against a rubric, giving a justification and a level (full, partial, minimal, none) for each criterion, as JSON.
+created_by: jeodn
+seed_examples:
+  - context: |
+      QUESTION: Prove that 1+2+...+n = n(n+1)/2 for all n >= 1.
+      RUBRIC: {
+        "rubric_id": "induction_v1",
+        "criteria": [
+          {
+            "id": "base_case",
+            "name": "Base case",
+            "levels": {
+              "full": "States the starting value and correctly verifies the claim for it.",
+              "partial": "Verifies the claim for a valid starting value but makes a minor error in the check.",
+              "minimal": "Names a base case but does not verify the claim for it.",
+              "none": "No base case is given."
+            }
+          },
+          {
+            "id": "induction_hypothesis",
+            "name": "Induction hypothesis",
+            "levels": {
+              "full": "Explicitly assumes the claim holds for an arbitrary k (or for all values up to k in strong induction) without assuming the k+1 case.",
+              "partial": "Assumes the claim for k but leaves k vague, or states the assumption incompletely.",
+              "minimal": "The hypothesis is only implied by later steps and never stated.",
+              "none": "No hypothesis is given, or the proof assumes what it must prove."
+            }
+          },
+          {
+            "id": "inductive_step",
+            "name": "Inductive step",
+            "levels": {
+              "full": "Derives the k+1 case from the hypothesis with every step correct and justified.",
+              "partial": "Uses the right approach but has a gap, an unjustified step, or a small algebraic error.",
+              "minimal": "Attempts the step but the reasoning is mostly invalid or does not use the hypothesis.",
+              "none": "No inductive step, or the step is entirely invalid."
+            }
+          },
+          {
+            "id": "conclusion",
+            "name": "Conclusion",
+            "levels": {
+              "full": "Concludes that the claim holds for all n in the stated domain and cites the principle of induction.",
+              "partial": "Concludes the claim holds but omits the domain or does not cite induction.",
+              "minimal": "Gives only a vague closing statement such as 'so it works'.",
+              "none": "No conclusion is given."
+            }
+          },
+          {
+            "id": "rigor_notation",
+            "name": "Rigor and notation",
+            "levels": {
+              "full": "Variables are defined, notation is consistent, and the proof is easy to follow.",
+              "partial": "Has minor notation inconsistencies or one undefined variable, but the meaning is clear.",
+              "minimal": "Has frequent notation errors or undefined symbols that make parts hard to follow.",
+              "none": "Notation is so unclear or inconsistent that the proof cannot be followed."
+            }
+          }
+        ]
+      }
+      <answer>
+      Base case: For n=1, the left side is 1 and the right side is 1(1+1)/2 = 1, so the statement holds.
+
+      Induction hypothesis: Assume that for some integer k >= 1, 1+2+...+k = k(k+1)/2.
+
+      Inductive step: For n=k+1, we have
+      1+2+...+k+(k+1)
+      = k(k+1)/2 + (k+1)
+      = (k+1)(k/2+1)
+      = (k+1)(k+2)/2.
+      This is the required formula with n=k+1.
+
+      Conclusion: By mathematical induction, the formula holds for all integers n >= 1.
+      </answer>
+    question: >
+      Grade this proof against the rubric. Output only valid JSON.
+    answer: |
+      {
+        "criteria": [
+          {
+            "id": "base_case",
+            "justification": "The proof checks n=1 explicitly. Both sides equal 1, so the base case is verified correctly.",
+            "level": "full"
+          },
+          {
+            "id": "induction_hypothesis",
+            "justification": "The proof assumes the formula holds for an arbitrary integer k >= 1 and does not assume the k+1 case.",
+            "level": "full"
+          },
+          {
+            "id": "inductive_step",
+            "justification": "The proof substitutes the induction hypothesis and simplifies k(k+1)/2 + (k+1) to (k+1)(k+2)/2, which is the required expression for k+1.",
+            "level": "full"
+          },
+          {
+            "id": "conclusion",
+            "justification": "The proof explicitly invokes mathematical induction and states that the formula holds for all integers n >= 1.",
+            "level": "full"
+          },
+          {
+            "id": "rigor_notation",
+            "justification": "The variables and domain are clearly specified, the algebraic steps are correct, and the proof is logically organized.",
+            "level": "full"
+          }
+        ]
+      }
+  # ...4 more, minimum 5 total
