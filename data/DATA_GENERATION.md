@@ -51,7 +51,27 @@ mkdir -p ~/scratch/taxo-test/knowledge/computer_science/csc236
 cp -r taxonomy/knowledge/computer_science/csc236/$TOPIC ~/scratch/taxo-test/knowledge/computer_science/csc236/
 ```
 
-## Running it
+## Running it as a batch job (recommended)
+
+`jobs/generate_data.sh` does every step below in one Slurm job: checks the GPU, starts Qwen, waits until it's ready, validates the taxonomy, runs generation and shuts Qwen down. You don't need to stay connected. From the team folder on Fir (after `git pull` and the one-time setup):
+
+```bash
+sbatch jobs/generate_data.sh program_correctness            # one topic
+sbatch jobs/generate_data.sh induction recurrences          # several topics
+SCALE=30 sbatch --time=12:00:00 jobs/generate_data.sh all   # whole taxonomy, bigger run
+```
+
+- Default time limit is 8 hours and default scale factor is 5. Change them with `--time=...` and `SCALE=...` as above.
+- Output goes to `~/scratch/sdg/<topics>/` (set `OUT=...` to change it). Submitting again with the same topics and `OUT` resumes from checkpoints.
+- Check on it with `squeue -u $USER` (`ST` is `PD` while waiting, `R` while running), and follow progress with `tail -f ~/sdg-<jobid>.log`. Qwen's own log is `<output folder>/vllm.log`.
+- Cancel with `scancel <jobid>`.
+- If it fails with "CUDA doesn't work on node ...", resubmit with `sbatch --exclude=<node> ...`.
+
+The script uses a port based on the job ID instead of 8000, since other jobs can run on the same node. The interactive steps below use 8000; if `vllm serve` fails because the port is in use, add `--port 8123` (any free number) and use that port in the `curl` and `--endpoint-url` commands.
+
+## Running it interactively
+
+Useful for testing or debugging a single step.
 
 ### 1. Get a GPU
 
@@ -72,9 +92,19 @@ It should show an H100 with a temperature (e.g. `25C`), power (e.g. `66W / 700W`
 
 ### 2. Start Qwen
 
+Run this **after** `salloc`, on the GPU node. Don't activate the model environment on the login node first: it carries over into the session and CUDA fails to start.
+
 ```bash
 cd /project/def-engine14/RedHat-x-IBM-InstructLab-Fall2026 && module load opencv/4.13 python/3.13 cuda/13.2 && source env/model/.venv/bin/activate
 ```
+
+Check that CUDA works on this node (some nodes pass `nvidia-smi` but fail here):
+
+```bash
+python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+```
+
+It should print `True NVIDIA H100 80GB HBM3`. If it fails with "CUDA driver initialization failed", `exit` and ask for another node with `--exclude=<this node>`.
 
 ```bash
 vllm serve models/Qwen3.8-27B --served-model-name qwen3.8-27b /project/def-engine14/RedHat-x-IBM-InstructLab-Fall2026/models/Qwen3.8-27B --max-model-len 32768 --max-num-seqs 256 > ~/vllm.log 2>&1 &
@@ -156,7 +186,9 @@ The `TIME_LEFT` column shows how long your session has left (e.g. `1:23:10`). Yo
 2. Switch to ilab (step 3).
 3. Rerun the **exact same** `ilab data generate` command, with the same `--taxonomy-path` and `--output-dir`.
 
-The log should say it found existing checkpoints instead of `No existing checkpoints found ... generating from scratch`. Work that was in progress when the session ended is redone, but finished batches are kept. Don't change your `qna.yaml` between the interrupted run and the resumed one, or the checkpoints won't match the new seeds. If you did change it, delete `<output-dir>/checkpoints/` and start fresh.
+The log should say it found existing checkpoints instead of `No existing checkpoints found ... generating from scratch`. Work that was in progress when the session ended is redone, but finished batches are kept.
+
+A checkpoint is only written once a batch has gone through **every** step of the pipeline (generation and all the checking steps), and in our test the first batch took well over 30 minutes. If a session ends before that, there's nothing to resume and the next run starts from scratch. Check whether anything has been saved with `ls -l <output-dir>/checkpoints/*/`. Don't change your `qna.yaml` between the interrupted run and the resumed one, or the checkpoints won't match the new seeds. If you did change it, delete `<output-dir>/checkpoints/` and start fresh.
 
 For long runs (e.g. all topics), use a batch job (`sbatch`) with a longer `--time` instead of an interactive session.
 
@@ -181,6 +213,7 @@ Type `exit` when you're done with a GPU session, before starting another. Runnin
 | `Failed to load tokenizer ... at qwen3.8-27b` | `--model` was the short name | Pass the full model folder path |
 | `404 ... model ... does not exist` | vLLM doesn't answer to the full path | Restart vLLM with both `--served-model-name` values |
 | vLLM: `Failed to infer device type` | vLLM started on a node without a GPU | Run it inside `salloc`; check `hostname` and `nvidia-smi` |
+| `CUDA driver initialization failed` | Environment activated on the login node, or a faulty node | Set up again on the GPU node; if the torch check still fails, `exit` and use `--exclude=<node>` |
 | `nvidia-smi` shows `ERR!` | Faulty node | `exit`, then `salloc ... --exclude=<node>`, and report the node to support@tech.alliancecan.ca |
 | vLLM log stuck after `torch.compile took ...` | First-time GPU kernel compile | Wait; or restart with `--gdn-prefill-backend triton` |
 | `Got unexpected extra arguments` | Spaces after a `\` in a multi-line command | Put the command on one line |
