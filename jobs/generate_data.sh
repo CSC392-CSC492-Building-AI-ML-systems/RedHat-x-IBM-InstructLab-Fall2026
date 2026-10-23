@@ -7,9 +7,9 @@
 #SBATCH --job-name=sdg
 #SBATCH --output=/home/%u/%x-%j.log
 #
-# Generate synthetic training data with ilab, using Qwen (served by vLLM) as the teacher.
-# Everything runs inside this one job: start Qwen, wait until it's ready, validate the
-# taxonomy, run `ilab data generate`, then shut Qwen down.
+# Generate synthetic training data with ilab, using a teacher model served by vLLM.
+# Everything runs inside this one job: validate the taxonomy, start the teacher, wait until
+# it's ready, run `ilab data generate`, then shut the teacher down.
 #
 # Submit from the repo folder on Fir:
 #   sbatch jobs/generate_data.sh program_correctness           # one topic
@@ -17,14 +17,18 @@
 #   sbatch jobs/generate_data.sh all                           # the whole taxonomy/ folder
 #
 # Optional settings (put them before sbatch, e.g. `SCALE=30 sbatch jobs/generate_data.sh all`):
+#   TEACHER mistral (default) or qwen. Mistral-7B-Instruct is ilab's default teacher and
+#           matches sdg's prompt format. Qwen thinks out loud with sdg's prompts (slow, and
+#           <think> text ends up in the data), so only use it if that's been fixed.
+#   MODEL   path to the teacher model folder (overrides the TEACHER default path)
 #   SCALE   --sdg-scale-factor (default 5, small for testing)
-#   OUT     output folder (default ~/scratch/sdg/<topics>). Reuse the same OUT to resume.
+#   OUT     output folder (default ~/scratch/sdg/<teacher>/<topics>). Reuse the same OUT to resume.
 # To change the time limit:  sbatch --time=12:00:00 jobs/generate_data.sh ...
 # To avoid known bad nodes:  sbatch --exclude=fc10518,fc10515 jobs/generate_data.sh ...
 #
 # Before the first run, do the one-time docling setup in docs/data-generation.md.
 # Progress:  tail -f ~/sdg-<jobid>.log      (this script)
-#            tail -f <OUT>/vllm.log         (Qwen)
+#            tail -f <OUT>/vllm.log         (the teacher model)
 
 set -eo pipefail
 cd "$SLURM_SUBMIT_DIR"
@@ -37,11 +41,28 @@ fi
 
 TOPICS=("$@")
 SCALE="${SCALE:-5}"
-OUT="${OUT:-$HOME/scratch/sdg/$(
+TEACHER="${TEACHER:-mistral}"
+case "$TEACHER" in
+mistral)
+    MODEL_FAMILY=mistral
+    DEFAULT_MODEL="$REPO/models/Mistral-7B-Instruct-v0.2"
+    [ -d "$DEFAULT_MODEL" ] || DEFAULT_MODEL="$HOME/scratch/models/Mistral-7B-Instruct-v0.2"
+    ;;
+qwen)
+    MODEL_FAMILY="" # sdg has no Qwen prompt template; it falls back to merlinite
+    DEFAULT_MODEL="$REPO/models/Qwen3.8-27B"
+    ;;
+*)
+    echo "ERROR: TEACHER must be mistral or qwen, not '$TEACHER'"
+    exit 1
+    ;;
+esac
+MODEL_PATH="${MODEL:-$DEFAULT_MODEL}"
+SERVED_NAME="$(basename "$MODEL_PATH" | tr '[:upper:]' '[:lower:]')"
+OUT="${OUT:-$HOME/scratch/sdg/$TEACHER/$(
     IFS=_
     echo "${TOPICS[*]}"
 )}"
-MODEL_PATH="$REPO/models/Qwen3.8-27B"
 # Other jobs can share this node, so pick a port from the job ID instead of always 8000.
 PORT=$((8000 + SLURM_JOB_ID % 1000))
 ENDPOINT="http://localhost:$PORT/v1"
@@ -49,8 +70,13 @@ mkdir -p "$OUT"
 
 echo "Job $SLURM_JOB_ID on $(hostname), started $(date)"
 echo "Topics: ${TOPICS[*]}   Scale factor: $SCALE   Output: $OUT   Port: $PORT"
+echo "Teacher: $TEACHER ($MODEL_PATH)"
 
 # ---- Checks that need no GPU -------------------------------------------------------
+if [ ! -f "$MODEL_PATH/config.json" ]; then
+    echo "ERROR: no model found at $MODEL_PATH (see docs/data-generation.md for downloading it)."
+    exit 1
+fi
 DOCLING_CONFIG="$HOME/.local/share/instructlab/sdg/models/config.yaml"
 if [ ! -f "$DOCLING_CONFIG" ]; then
     echo "ERROR: $DOCLING_CONFIG not found. Do the one-time docling setup in docs/data-generation.md first."
@@ -75,7 +101,17 @@ else
 fi
 echo "Taxonomy: $TAXONOMY"
 
-# ---- Start Qwen ----------------------------------------------------------------------
+# ---- Validate before using the GPU's time on vLLM -------------------------------------
+module load python/3.11.5
+source "$REPO/env/ilab/.venv/bin/activate"
+if [ ! -f "$HOME/.config/instructlab/config.yaml" ]; then
+    ilab config init --non-interactive --taxonomy-path "$REPO/taxonomy" --taxonomy-base empty
+fi
+echo "Validating taxonomy..."
+ilab taxonomy diff --taxonomy-path "$TAXONOMY" --taxonomy-base empty
+deactivate
+
+# ---- Start the teacher ----------------------------------------------------------------------
 module load opencv/4.13 python/3.13 cuda/13.2
 source "$REPO/env/model/.venv/bin/activate"
 
@@ -89,7 +125,7 @@ fi
 # The second served name (the full path) is required: ilab sends --model as the model name
 # and also loads the tokenizer from that path.
 vllm serve "$MODEL_PATH" \
-    --served-model-name qwen3.8-27b "$MODEL_PATH" \
+    --served-model-name "$SERVED_NAME" "$MODEL_PATH" \
     --max-model-len 32768 --max-num-seqs 256 --port "$PORT" \
     >"$OUT/vllm.log" 2>&1 &
 VLLM_PID=$!
@@ -121,17 +157,14 @@ deactivate
 module load python/3.11.5
 source "$REPO/env/ilab/.venv/bin/activate"
 
-if [ ! -f "$HOME/.config/instructlab/config.yaml" ]; then
-    ilab config init --non-interactive --taxonomy-path "$REPO/taxonomy" --taxonomy-base empty
-fi
-
-echo "Validating taxonomy..."
-ilab taxonomy diff --taxonomy-path "$TAXONOMY" --taxonomy-base empty
+FAMILY_ARGS=()
+[ -n "$MODEL_FAMILY" ] && FAMILY_ARGS=(--model-family "$MODEL_FAMILY")
 
 echo "Generating data, started $(date)"
 ilab data generate \
     --endpoint-url "$ENDPOINT" \
     --model "$MODEL_PATH" \
+    "${FAMILY_ARGS[@]}" \
     --taxonomy-path "$TAXONOMY" \
     --taxonomy-base empty \
     --sdg-scale-factor "$SCALE" \
