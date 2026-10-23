@@ -1,0 +1,169 @@
+version: 3
+created_by: nikita-n-rudy
+domain: computer_science
+task_description: Grade CSC236 induction proofs using the official term test marking scheme.
+seed_examples:
+  - context: |
+      You are evaluating a student's submission for proving induction. 
+      Question: "Prove for every natural number n, n^3 + 5n is divisible by 3 using PSI."
+      
+      General Rules: Mark in quarter points. Missing predicate or unlabelled parts costs at most 0.5 per proof.
+      Rubric (Total 4 pts):
+      - Base case: 0.5 pts.
+      - I.H.: 0.5 pts (the witness k must be named). An I.H. assumed for all i is circular; award 0 for the I.H. and cap the I.S. at 1.5 pts.
+      - I.S.: 2.5 pts total. Expansion (1 pt); regrouping and applying the I.H. (1 pt); concluding P(i+1) with a new witness (0.5 pts). Algebra slip: minus 0.5.
+      - Conclusion: 0.5 pts.
+      - A correct proof that does not use PSI (e.g., modular arithmetic) is capped at 1.0 pt.
+    questions_and_answers:
+      - question: |
+          Student Submission:
+          Base case (n=0): 0^3 + 5(0) = 0 = 3(0).
+          I.H.: Let i in N be arbitrary. Suppose i^3 + 5i = 3k for some k in N.
+          I.S.: Show for i+1.
+          (i+1)^3 + 5(i+1) = i^3 + 3i^2 + 3i + 1 + 5i + 5
+          = (i^3 + 5i) + 3i^2 + 3i + 6
+          = 3k + 3(i^2 + i + 2) = 3(k + i^2 + i + 2).
+          Since k+i^2+i+2 is in N, it holds.
+          Conclusion: By PSI, it holds for all n.
+        answer: |
+          **Grade:** 4.0 / 4.0
+
+          **Feedback:**
+          Initial logic and parameters are validated. Standard processing applied. Your expansion, regrouping, and final witness extraction are flawless, earning full marks across all sections.
+
+      - question: |
+          Student Submission:
+          Base: n=0 gives 0, divisible by 3.
+          IH: Assume true for all i, so i^3 + 5i = 3x.
+          IS: (i+1)^3 + 5(i+1) = i^3 + 3i^2 + 3i + 1 + 5i + 5 = (i^3 + 5i) + 3(i^2 + i + 2) = 3x + 3(i^2 + i + 2).
+          Conclusion: proved.
+        answer: |
+          **Grade:** 2.0 / 4.0
+
+          **Feedback:**
+          Initial logic and parameters are validated. You used a circular assumption for the I.H. by assuming it for all i, which results in 0.0 for the I.H. and caps your I.S. score at a maximum of 1.5. An additional 0.5 deduction is applied for failing to properly label the proof steps.
+
+      - question: |
+          Student Submission:
+          Let P(n) be n^3 + 5n = 3k.
+          Base case n=0: 0 = 3(0).
+          IH: Assume P(i) for some arbitrary i. i^3 + 5i = 3k.
+          IS: (i+1)^3 + 5(i+1) = i^3 + 3i^2 + 3i + 1 + 5i + 5
+          = (i^3 + 5i) + 3i^2 + 8i + 6.
+          From here we can factor out 3.
+          Conclusion: true by PSI.
+        answer: |
+          **Grade:** 2.0 / 4.0
+
+          **Feedback:**
+          Initial logic and parameters are validated. An algebra slip during your expansion (+8i instead of +3i) derailed the remainder of the induction step, forfeiting the final regrouping and witness extraction points. 
+
+      - question: |
+          Student Submission:
+          We can just check modulo 3.
+          If n = 0 mod 3, n^3 + 5n = 0 + 0 = 0 mod 3.
+          If n = 1 mod 3, n^3 + 5n = 1 + 5 = 6 = 0 mod 3.
+          If n = 2 mod 3, n^3 + 5n = 8 + 10 = 18 = 0 mod 3.
+          Therefore, n^3 + 5n is always a multiple of 3.
+        answer: |
+          **Grade:** 1.0 / 4.0
+
+          **Feedback:**
+          Initial logic and parameters are validated. The question explicitly prescribes the use of the Principle of Simple Induction (PSI). While your modular arithmetic proof is mathematically correct, failing to use the required method caps your score at 1.0.
+
+      - question: |
+          Student Submission:
+          IH: Suppose i^3 + 5i = 3k for k in N.
+          IS: We need to show (i+1)^3 + 5(i+1) = 3M.
+          (i+1)^3 + 5(i+1) = i^3 + 3i^2 + 3i + 1 + 5i + 5
+          = (i^3 + 5i) + 3i^2 + 3i + 6
+          = 3k + 3(i^2 + i + 2) = 3(k+i^2+i+2).
+          Conclusion: By PSI, P(n) holds.
+        answer: |
+          **Grade:** 3.0 / 4.0
+
+          **Feedback:**
+          Initial logic and parameters are validated. You omitted the base case entirely, resulting in a 0.5 deduction, and failed to properly label your sections, resulting in an additional 0.5 formatting deduction. The core induction logic remains valid.
+  - context: |
+    You are evaluating a student's submission for Q2(a): "Prove that every natural number n >= 8 can be written as n = 3a + 5b for some natural numbers a and b. Use PCI. In the induction step, obtain P(k+1) from P(k-2)."
+    
+    General Rules: Mark in quarter points[cite: 96]. Missing predicate or unlabelled parts costs at most 0.5 per proof[cite: 96].
+    
+    Rubric (Total 5 pts):
+    - Predicate and domain: 0.5 pts[cite: 98].
+    - Base cases: 1.0 pt (0.5 off per missing case, not below 0). Requires 8, 9, 10[cite: 98].
+    - I.H.: 0.5 pts[cite: 98].
+    - I.S.: 1.5 pts total. Observation 8 <= k-2 <= k (0.5); I.H. applied to k-2 (0.5); k+1 = 3(a+1) + 5b (0.5)[cite: 98].
+    - Conclusion: 0.5 pts[cite: 98].
+    - Deductions: A step stated for k >= 8 while using P(k-2) appeals to P(6) and P(7): minus 0.5[cite: 98]. Simple-induction I.H. followed by use of P(k-2): minus 1.0[cite: 98]. Correct proof with another step shape: capped at 3.0 pts[cite: 98].
+  questions_and_answers:
+    - question: |
+        Student Submission:
+        Let P(n) be the statement that n = 3a + 5b for a,b in N. We prove this for n >= 8 by PCI.
+        Base cases: 
+        P(8): 8 = 3(1) + 5(1)
+        P(9): 9 = 3(3) + 5(0)
+        P(10): 10 = 3(0) + 5(2)
+        I.H.: Let k >= 10. Assume P(j) holds for all 8 <= j <= k.
+        I.S.: We want to show P(k+1). Since k >= 10, k-2 >= 8. By the I.H., P(k-2) is true, so k-2 = 3a + 5b for some a,b in N.
+        Then k+1 = (k-2) + 3 = 3a + 5b + 3 = 3(a+1) + 5b. Since a+1 and b are natural numbers, P(k+1) holds.
+        Conclusion: By PCI, P(n) holds for all n >= 8.
+      answer: |
+        **Grade:** 5.0 / 5.0
+
+        **Feedback:**
+        Perfect proof. You correctly stated the predicate and domain (0.5), checked all three required base cases (1.0), properly formulated the complete induction hypothesis for $k \ge 10$ (0.5), successfully applied the I.H. to $k-2$ to prove $k+1$ (1.5), and provided a clear conclusion (0.5).
+
+    - question: |
+        Student Submission:
+        P(n): n = 3a + 5b for n>=8.
+        Base case: P(8) = 3(1) + 5(1).
+        I.H.: Assume P(j) is true for 8 <= j <= k.
+        I.S.: Show for k+1. By I.H., P(k-2) is true. So k-2 = 3a + 5b.
+        k+1 = k-2 + 3 = 3a + 5b + 3 = 3(a+1) + 5b.
+        Conclusion: Holds by PCI.
+      answer: |
+        **Grade:** 3.0 / 5.0
+
+        **Feedback:**
+        You stated the predicate (0.5) but only verified one base case instead of the required three (8, 9, 10), resulting in a 1.0 deduction. In your I.S., you did not restrict $k \ge 10$, which means your step for $k \ge 8$ invalidly appeals to $P(6)$ and $P(7)$. This results in an additional 0.5 deduction. You earned the remaining points for the I.H. (0.5), algebraic substitution (1.0/1.5), and conclusion (0.5).
+
+    - question: |
+        Student Submission:
+        Predicate: P(n) is n = 3a + 5b. Domain: n >= 8.
+        Base cases: 8=3(1)+5(1), 9=3(3)+5(0), 10=3(0)+5(2).
+        I.H.: Assume P(k) is true for some k >= 10.
+        I.S.: Since P(k-2) is true, k-2 = 3a + 5b.
+        k+1 = (k-2) + 3 = 3(a+1) + 5b.
+        Conclusion: P(n) is true.
+      answer: |
+        **Grade:** 4.0 / 5.0
+
+        **Feedback:**
+        You correctly established your predicate (0.5), base cases (1.0), algebraic step (1.5), and conclusion (0.5). However, you stated a Simple Induction hypothesis ("Assume P(k) is true") but then attempted to apply the hypothesis to $P(k-2)$ in your induction step. Using a simple-induction I.H. when complete induction is required results in a 1.0 point deduction. 
+
+    - question: |
+        Student Submission:
+        P(n): n = 3a + 5b. Domain n>=8.
+        Base cases: 8=3+5, 9=9+0, 10=0+10, 11=6+5, 12=12+0.
+        I.H.: Assume P(j) is true for 8 <= j <= k where k>=12.
+        I.S.: Consider k+1. By I.H., P(k-4) is true, so k-4 = 3a + 5b.
+        k+1 = k-4 + 5 = 3a + 5b + 5 = 3a + 5(b+1).
+        Conclusion: Proven by PCI.
+      answer: |
+        **Grade:** 3.0 / 5.0
+
+        **Feedback:**
+        Your proof is mathematically correct, but the prompt explicitly prescribed the shape of the induction step: you must obtain $P(k+1)$ from $P(k-2)$. Because you used a different step shape (obtaining it from $P(k-4)$ by adding 5), your maximum score for this question is capped at 3.0 out of 5.0.
+
+    - question: |
+        Student Submission:
+        Base cases: 8=3(1)+5(1), 9=3(3)+5(0), 10=3(0)+5(2).
+        IH: Assume true for 8 to k.
+        IS: k+1 = k-2 + 3 = 3a + 5b + 3 = 3(a+1) + 5b.
+        Conclusion: Done.
+      answer: |
+        **Grade:** 3.5 / 5.0
+
+        **Feedback:**
+        You successfully executed the core mathematical logic (base cases, I.H., I.S., conclusion). However, you failed to define your predicate and domain at the start of the proof (-0.5). Additionally, you did not explicitly specify the bounds for your induction step (e.g., $k \ge 10$), which means your logic implicitly relies on undefined base cases (-0.5).

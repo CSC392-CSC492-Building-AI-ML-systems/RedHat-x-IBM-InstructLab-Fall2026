@@ -1,0 +1,74 @@
+version: 3
+created_by: nikita-n-rudy
+domain: computer_science
+task_description: Grade CSC236 asymptotic runtime analysis proofs using the official term test marking scheme.
+seed_examples:
+  - context: |
+      You are evaluating a student's submission for finding Big-O constants.
+      Question: Let f(n) = 3n^2 + 10n + 7 and g(n) = n^2. Find the smallest natural number c for which there is an n_0 in N with for all n >= n_0, f(n) <= c * g(n), and give such an n_0. Justify both that your c works and that c - 1 does not work.
+      Rubric (Total 1 pt):
+      - 0.25 pts for identifying c = 4.
+      - 0.25 pts for a valid n_0 (any n_0 >= 11).
+      - 0.25 pts for a valid mathematical proof that f(n) <= 4g(n) for all n >= n_0. Checking only n=n_0 loses this quarter.
+      - 0.25 pts for proving c = 3 fails for every n_0.
+      - Note: A wrong c (e.g., 20, from term-by-term bounds) earns at most 0.25 total for a correct proof that it works.
+    questions_and_answers:
+      - question: |
+          Student Submission:
+          proof: Assuming that 3n^2 + 10n + 7 >= n^2
+          We know that exact c will not work for any choice of n_0. So from it we take c+1 to be smallest.
+        answer: |
+          **Grade:** 0.0 / 1.0
+
+          **Feedback:** 
+          You did not identify the correct value for c or n_0. Your justification relies on a false assumption (setting up the inequality backwards as f(n) >= g(n) instead of f(n) <= c * g(n)) and does not mathematically prove a bound. You also did not attempt to prove that c-1 does not work.
+
+      - question: |
+          Student Submission:
+          c = 4. Let's find n_0. We need 3n^2 + 10n + 7 <= 4n^2.
+          This means n^2 - 10n - 7 >= 0.
+          The roots are 5 +/- sqrt(32). Since sqrt(32) is between 5 and 6, the positive root is around 10.6.
+          So we can pick n_0 = 11. This works for all n >= 11.
+          If c = 3, we need 3n^2 + 10n + 7 <= 3n^2, which implies 10n + 7 <= 0. Since n is a natural number, 10n + 7 is always strictly positive, so this is impossible for any n_0.
+        answer: |
+          **Grade:** 1.0 / 1.0
+
+          **Feedback:**
+          Excellent work. You correctly identified c = 4 and a valid n_0 = 11. Your algebraic proof for why c = 4 works for all n >= 11 is sound, and you successfully demonstrated why c = 3 yields an impossible inequality.
+
+      - question: |
+          Student Submission:
+          The smallest c is 4. If we set 3n^2 + 10n + 7 <= 4n^2, we get n^2 - 10n - 7 >= 0. 
+          If I pick n = 11, then 121 - 110 - 7 = 4 >= 0.
+          So n_0 = 11 works.
+        answer: |
+          **Grade:** 0.5 / 1.0
+
+          **Feedback:**
+          You earned 0.25 points for identifying c = 4, and 0.25 points for identifying a valid n_0 = 11. However, you only verified the inequality for the specific case of n = 11 rather than proving it holds for all n >= n_0 (-0.25). Additionally, you completely omitted the required proof showing that c - 1 (which is 3) does not work (-0.25).
+
+      - question: |
+          Student Submission:
+          c = 20. 
+          3n^2 + 10n + 7 <= 3n^2 + 10n^2 + 7n^2 = 20n^2.
+          This holds as long as n >= 1, so n_0 = 1.
+          c-1 is 19. 3n^2 + 10n + 7 <= 19n^2 means 16n^2 - 10n - 7 >= 0, which works for n_0 = 2, so 19 actually works too.
+        answer: |
+          **Grade:** 0.25 / 1.0
+
+          **Feedback:**
+          You found a valid upper bound (c = 20) by bounding term-by-term, but it is not the *smallest* natural number c. Because you used a wrong c, the maximum score you can receive for a correct proof that your c works is 0.25 points. You earned this 0.25 by showing 3n^2 + 10n + 7 <= 20n^2 for n >= 1. The rest of the problem cannot be completed correctly with c = 20.
+
+      - question: |
+          Student Submission:
+          c = 4. n_0 = 10.
+          For c=4: 3n^2 + 10n + 7 <= 4n^2 -> n^2 - 10n - 7 >= 0.
+          For n=10, 100 - 100 - 7 = -7, wait, so n_0 = 12.
+          For n>=12, n^2 is much bigger than 10n, so n^2 - 10n - 7 >= 0 holds.
+          For c=3: 3n^2 + 10n + 7 <= 3n^2 -> 10n + 7 <= 0.
+          Since n is in N, 10n + 7 is always positive, so c=3 fails.
+        answer: |
+          **Grade:** 1.0 / 1.0
+
+          **Feedback:**
+          You correctly identified c = 4 (0.25) and recovered from your arithmetic error to find a valid n_0 = 12 (0.25). Your logical justification for why c = 4 works for all n >= 12 is acceptable (0.25), and your algebraic proof showing that c = 3 results in a contradiction for natural numbers is correct (0.25).

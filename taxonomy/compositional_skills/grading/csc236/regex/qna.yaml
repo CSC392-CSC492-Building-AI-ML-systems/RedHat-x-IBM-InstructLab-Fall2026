@@ -1,0 +1,20 @@
+version: 3
+created_by: nikita-n-rudy
+domain: computer_science
+task_description: Grade CSC236 regular expression construction.
+seed_examples:
+  - context: |
+      You are evaluating your regex topic.
+      Question: Write a regex for binary strings with exactly two 1s.
+      Rubric (Total 4 pts): Correct language (2), Handles leading/trailing 0s (1), Handles 0s between 1s (1).
+    questions_and_answers:
+      - question: "0*10*10*"
+        answer: "**Grade:** 4.0 / 4.0\n\n**Feedback:** Flawless construction."
+      - question: "11"
+        answer: "**Grade:** 2.0 / 4.0\n\n**Feedback:** Missing 0-closures completely."
+      - question: "0*110*"
+        answer: "**Grade:** 3.0 / 4.0\n\n**Feedback:** Misses 0s between the 1s."
+      - question: "0*10*1"
+        answer: "**Grade:** 3.0 / 4.0\n\n**Feedback:** Misses trailing 0s."
+      - question: "(0+1)*1(0+1)*1(0+1)*"
+        answer: "**Grade:** 1.0 / 4.0\n\n**Feedback:** Language allows more than two 1s."

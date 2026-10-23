@@ -1,0 +1,47 @@
+version: 3
+created_by: nikita-n-rudy
+domain: computer_science
+task_description: Grade CSC236 DFA/NFA state transitions and language acceptance.
+seed_examples:
+  - context: |
+      You are evaluating Ashton's DFA/NFA topic.
+      Question: Construct a DFA for strings over {a,b} ending in 'ab'.
+      Rubric (Total 4 pts): Start state logic (1), Intermediate transitions (1), Accept state (1), Determinism (1).
+    questions_and_answers:
+      - question: |
+          Student Submission:
+          q0 is start. a->q1, b->q0. 
+          q1: a->q1, b->q2(accept). 
+          q2: a->q1, b->q0.
+        answer: |
+          **Grade:** 4.0 / 4.0
+
+          **Feedback:** Perfect deterministic transitions.
+      - question: |
+          Student Submission:
+          q0 start. a->q1. q1: b->q2(accept).
+        answer: |
+          **Grade:** 3.0 / 4.0
+
+          **Feedback:** Missing explicit transitions for determinism (this is an NFA).
+      - question: |
+          Student Submission:
+          q0 start. a,b->q0. a->q1. b->q2(accept).
+        answer: |
+          **Grade:** 3.0 / 4.0
+
+          **Feedback:** NFA provided instead of a DFA.
+      - question: |
+          Student Submission:
+          Correct transitions but q1 is accept state.
+        answer: |
+          **Grade:** 3.0 / 4.0
+
+          **Feedback:** Incorrect accept state definition.
+      - question: |
+          Student Submission:
+          q0 start. a->q1, b->q0. q1: b->q2. q2 is accept. q2: a,b->q2.
+        answer: |
+          **Grade:** 3.0 / 4.0
+
+          **Feedback:** Trapping in q2 means it accepts 'aba', which does not end in 'ab'.
