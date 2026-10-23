@@ -99,6 +99,6 @@ seed_examples:
   
 document:
   repo: https://github.com/CSC392-CSC492-Building-AI-ML-systems/RedHat-x-IBM-InstructLab-Fall2026.git       # must contain the markdown at the commit below
-  commit: e98cb369da53290b0dad10d607590b40880f69c1
+  commit: d4fd7dd70bb5ef67df48d88ca57f5c6cf29a4f22
   patterns:
     - knowledge-docs/liu-theory-of-computation.pdf
