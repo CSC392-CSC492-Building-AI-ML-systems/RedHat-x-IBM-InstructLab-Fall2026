@@ -1,47 +1,61 @@
-version: 3
+version: 2
 created_by: nikita-n-rudy
-domain: computer_science
 task_description: Grade CSC236 program correctness and loop invariants.
 seed_examples:
   - context: |
       You are evaluating Ray's program correctness topic.
       Question: Prove loop invariant I(j): s = sum(A[0..j-1]) for loop `for j in 0..n: s+=A[j]`.
       Rubric (Total 4 pts): Initialization (1), Maintenance (2), Termination/Postcondition (1).
-    questions_and_answers:
-      - question: |
-          Student Submission:
-          Init: j=0, s=0, sum(empty)=0. 
-          Maint: s'=s+A[j] = sum(0..j-1)+A[j] = sum(0..j). 
-          Term: j=n, s=sum(0..n-1).
-        answer: |
-          **Grade:** 4.0 / 4.0
+    question: |
+      Student Submission:
+      Init: j=0, s=0, sum(empty)=0.
+      Maint: s'=s+A[j] = sum(0..j-1)+A[j] = sum(0..j).
+      Term: j=n, s=sum(0..n-1).
+    answer: |
+      **Grade:** 4.0 / 4.0
 
-          **Feedback:** Perfect invariant proof.
-      - question: |
-          Student Submission:
-          Init works. Maint: s gets bigger. Term: j=n.
-        answer: |
-          **Grade:** 2.0 / 4.0
+      **Feedback:** Perfect invariant proof.
+  - context: |
+      You are evaluating Ray's program correctness topic.
+      Question: Prove loop invariant I(j): s = sum(A[0..j-1]) for loop `for j in 0..n: s+=A[j]`.
+      Rubric (Total 4 pts): Initialization (1), Maintenance (2), Termination/Postcondition (1).
+    question: |
+      Student Submission:
+      Init works. Maint: s gets bigger. Term: j=n.
+    answer: |
+      **Grade:** 2.0 / 4.0
 
-          **Feedback:** The maintenance step lacks mathematical rigor and fails to prove the state mutation.
-      - question: |
-          Student Submission:
-          Init: j=0, s=A[0], sum=A[0]. Maint works.
-        answer: |
-          **Grade:** 2.5 / 4.0
+      **Feedback:** The maintenance step lacks mathematical rigor and fails to prove the state mutation.
+  - context: |
+      You are evaluating Ray's program correctness topic.
+      Question: Prove loop invariant I(j): s = sum(A[0..j-1]) for loop `for j in 0..n: s+=A[j]`.
+      Rubric (Total 4 pts): Initialization (1), Maintenance (2), Termination/Postcondition (1).
+    question: |
+      Student Submission:
+      Init: j=0, s=A[0], sum=A[0]. Maint works.
+    answer: |
+      **Grade:** 2.5 / 4.0
 
-          **Feedback:** Initialization fails because the loop body hasn't executed yet at j=0.
-      - question: |
-          Student Submission:
-          Init works, Maint works. No termination.
-        answer: |
-          **Grade:** 3.0 / 4.0
+      **Feedback:** Initialization fails because the loop body hasn't executed yet at j=0.
+  - context: |
+      You are evaluating Ray's program correctness topic.
+      Question: Prove loop invariant I(j): s = sum(A[0..j-1]) for loop `for j in 0..n: s+=A[j]`.
+      Rubric (Total 4 pts): Initialization (1), Maintenance (2), Termination/Postcondition (1).
+    question: |
+      Student Submission:
+      Init works, Maint works. No termination.
+    answer: |
+      **Grade:** 3.0 / 4.0
 
-          **Feedback:** Missing termination/postcondition proof.
-      - question: |
-          Student Submission:
-          We prove variant f(j) = n - j decreases.
-        answer: |
-          **Grade:** 0.0 / 4.0
+      **Feedback:** Missing termination/postcondition proof.
+  - context: |
+      You are evaluating Ray's program correctness topic.
+      Question: Prove loop invariant I(j): s = sum(A[0..j-1]) for loop `for j in 0..n: s+=A[j]`.
+      Rubric (Total 4 pts): Initialization (1), Maintenance (2), Termination/Postcondition (1).
+    question: |
+      Student Submission:
+      We prove variant f(j) = n - j decreases.
+    answer: |
+      **Grade:** 0.0 / 4.0
 
-          **Feedback:** You proved loop termination (variant) instead of correctness (invariant).
+      **Feedback:** You proved loop termination (variant) instead of correctness (invariant).

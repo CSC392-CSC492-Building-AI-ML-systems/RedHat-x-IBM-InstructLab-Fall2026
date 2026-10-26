@@ -1,6 +1,5 @@
-version: 3
+version: 2
 created_by: nikita-n-rudy
-domain: computer_science
 task_description: Grade CSC236 structural induction proofs.
 seed_examples:
   - context: |
@@ -12,51 +11,86 @@ seed_examples:
       - I.S. (Case NOT): 1.0 pt.
       - I.S. (Case OP): 1.75 pts.
       - Conclusion: 0.25 pts.
-    questions_and_answers:
-      - question: |
-          Student Submission:
-          Base case A=p_i, var=1, bin=0. 1=0+1. 
-          I.S. Not case: var(~A)=var(A)=bin(A)+1=bin(~A)+1. 
-          Op case: var(A*B) = var(A)+var(B) = bin(A)+1+bin(B)+1 = bin(A*B)+1.
-        answer: |
-          **Grade:** 4.0 / 4.0
+    question: |
+      Student Submission:
+      Base case A=p_i, var=1, bin=0. 1=0+1.
+      I.S. Not case: var(~A)=var(A)=bin(A)+1=bin(~A)+1.
+      Op case: var(A*B) = var(A)+var(B) = bin(A)+1+bin(B)+1 = bin(A*B)+1.
+    answer: |
+      **Grade:** 4.0 / 4.0
 
-          **Feedback:** 
-          Flawless proof. All structural cases covered perfectly.
-      - question: |
-          Student Submission:
-          I.H. Assume P(A). I.S. Not case works. 
-          Op case: var(A*B) = var(A)+var(B) = bin(A)+bin(B) = bin(A*B).
-        answer: |
-          **Grade:** 3.25 / 4.0
+      **Feedback:**
+      Flawless proof. All structural cases covered perfectly.
+  - context: |
+      You are evaluating a student's submission for Question 4.
+      Question: Prove for every A in PROP, var(A) = bin(A) + 1.
+      Rubric (Total 4 pts):
+      - Predicate: 0.25 pts.
+      - Base case (variables): 0.75 pts.
+      - I.S. (Case NOT): 1.0 pt.
+      - I.S. (Case OP): 1.75 pts.
+      - Conclusion: 0.25 pts.
+    question: |
+      Student Submission:
+      I.H. Assume P(A). I.S. Not case works.
+      Op case: var(A*B) = var(A)+var(B) = bin(A)+bin(B) = bin(A*B).
+    answer: |
+      **Grade:** 3.25 / 4.0
 
-          **Feedback:** 
-          You dropped the +1 in the bin((A o B)) computation, resulting in a deduction of -0.75 in the OP case.
-      - question: |
-          Student Submission:
-          We use simple induction on the length of the formula.
-        answer: |
-          **Grade:** 0.5 / 4.0
+      **Feedback:**
+      You dropped the +1 in the bin((A o B)) computation, resulting in a deduction of -0.75 in the OP case.
+  - context: |
+      You are evaluating a student's submission for Question 4.
+      Question: Prove for every A in PROP, var(A) = bin(A) + 1.
+      Rubric (Total 4 pts):
+      - Predicate: 0.25 pts.
+      - Base case (variables): 0.75 pts.
+      - I.S. (Case NOT): 1.0 pt.
+      - I.S. (Case OP): 1.75 pts.
+      - Conclusion: 0.25 pts.
+    question: |
+      Student Submission:
+      We use simple induction on the length of the formula.
+    answer: |
+      **Grade:** 0.5 / 4.0
 
-          **Feedback:** 
-          Stating simple induction on length instead of structural induction earns a maximum of 0.5 points.
-      - question: |
-          Student Submission:
-          P(A) is true for all. Base case p_i var=1 bin=0. 
-          Op case: var(A*B) = var(A)+var(B) = bin(A*B)+1.
-        answer: |
-          **Grade:** 3.0 / 4.0
+      **Feedback:**
+      Stating simple induction on length instead of structural induction earns a maximum of 0.5 points.
+  - context: |
+      You are evaluating a student's submission for Question 4.
+      Question: Prove for every A in PROP, var(A) = bin(A) + 1.
+      Rubric (Total 4 pts):
+      - Predicate: 0.25 pts.
+      - Base case (variables): 0.75 pts.
+      - I.S. (Case NOT): 1.0 pt.
+      - I.S. (Case OP): 1.75 pts.
+      - Conclusion: 0.25 pts.
+    question: |
+      Student Submission:
+      P(A) is true for all. Base case p_i var=1 bin=0.
+      Op case: var(A*B) = var(A)+var(B) = bin(A*B)+1.
+    answer: |
+      **Grade:** 3.0 / 4.0
 
-          **Feedback:** 
-          You completely missed the Case NOT inductive step (-1.0).
-      - question: |
-          Student Submission:
-          Base case A=p_i, var=1, bin=0. 1=0+1. 
-          I.S. Not case: var(~A)=var(A)=bin(A)+1=bin(~A)+1. 
-          Op case: var(A*B) = var(A)+var(B) = bin(A)+1+bin(B)+1 = bin(A*B)+1.
-          Therefore it holds.
-        answer: |
-          **Grade:** 3.75 / 4.0
+      **Feedback:**
+      You completely missed the Case NOT inductive step (-1.0).
+  - context: |
+      You are evaluating a student's submission for Question 4.
+      Question: Prove for every A in PROP, var(A) = bin(A) + 1.
+      Rubric (Total 4 pts):
+      - Predicate: 0.25 pts.
+      - Base case (variables): 0.75 pts.
+      - I.S. (Case NOT): 1.0 pt.
+      - I.S. (Case OP): 1.75 pts.
+      - Conclusion: 0.25 pts.
+    question: |
+      Student Submission:
+      Base case A=p_i, var=1, bin=0. 1=0+1.
+      I.S. Not case: var(~A)=var(A)=bin(A)+1=bin(~A)+1.
+      Op case: var(A*B) = var(A)+var(B) = bin(A)+1+bin(B)+1 = bin(A*B)+1.
+      Therefore it holds.
+    answer: |
+      **Grade:** 3.75 / 4.0
 
-          **Feedback:** 
-          You missed the formal conclusion statement (-0.25).
+      **Feedback:**
+      You missed the formal conclusion statement (-0.25).

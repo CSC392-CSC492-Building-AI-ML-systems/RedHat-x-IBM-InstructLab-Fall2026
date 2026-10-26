@@ -1,46 +1,60 @@
-version: 3
+version: 2
 created_by: nikita-n-rudy
-domain: computer_science
 task_description: Grade CSC236 recursive runtime analysis and Master Theorem proofs.
 seed_examples:
   - context: |
       You are evaluating Daniel's recurrence topic.
       Question: Find asymptotic bound for T(n) = 4T(n/2) + n using repeated substitution.
       Rubric (Total 4 pts): Unrolling (1), Summation formulation (1), Closed-form math (1), Big-O Conclusion (1).
-    questions_and_answers:
-      - question: |
-          Student Submission:
-          Unrolls to sum of 4^i(n/2^i) = n sum 2^i. 
-          Sum is 2^(k+1)-1. k=log n, so sum is O(n^2). T(n) is O(n^2).
-        answer: |
-          **Grade:** 4.0 / 4.0
+    question: |
+      Student Submission:
+      Unrolls to sum of 4^i(n/2^i) = n sum 2^i.
+      Sum is 2^(k+1)-1. k=log n, so sum is O(n^2). T(n) is O(n^2).
+    answer: |
+      **Grade:** 4.0 / 4.0
 
-          **Feedback:** Perfect execution.
-      - question: |
-          Student Submission:
-          Unrolls to T(n) = 4(4T(n/4) + n/2) + n = 16T(n/4) + 3n. Concludes O(n log n).
-        answer: |
-          **Grade:** 2.0 / 4.0
+      **Feedback:** Perfect execution.
+  - context: |
+      You are evaluating Daniel's recurrence topic.
+      Question: Find asymptotic bound for T(n) = 4T(n/2) + n using repeated substitution.
+      Rubric (Total 4 pts): Unrolling (1), Summation formulation (1), Closed-form math (1), Big-O Conclusion (1).
+    question: |
+      Student Submission:
+      Unrolls to T(n) = 4(4T(n/4) + n/2) + n = 16T(n/4) + 3n. Concludes O(n log n).
+    answer: |
+      **Grade:** 2.0 / 4.0
 
-          **Feedback:** Math error in the initial unrolling step derailed the summation and conclusion.
-      - question: |
-          Student Submission:
-          Uses Master theorem: a=4, b=2, d=1. log_2(4)=2 > 1, so O(n^2).
-        answer: |
-          **Grade:** 1.0 / 4.0
+      **Feedback:** Math error in the initial unrolling step derailed the summation and conclusion.
+  - context: |
+      You are evaluating Daniel's recurrence topic.
+      Question: Find asymptotic bound for T(n) = 4T(n/2) + n using repeated substitution.
+      Rubric (Total 4 pts): Unrolling (1), Summation formulation (1), Closed-form math (1), Big-O Conclusion (1).
+    question: |
+      Student Submission:
+      Uses Master theorem: a=4, b=2, d=1. log_2(4)=2 > 1, so O(n^2).
+    answer: |
+      **Grade:** 1.0 / 4.0
 
-          **Feedback:** You used the Master Theorem when repeated substitution was explicitly prescribed.
-      - question: |
-          Student Submission:
-          Unrolls perfectly, gets n sum 2^i, but the series formula is wrong.
-        answer: |
-          **Grade:** 2.0 / 4.0
+      **Feedback:** You used the Master Theorem when repeated substitution was explicitly prescribed.
+  - context: |
+      You are evaluating Daniel's recurrence topic.
+      Question: Find asymptotic bound for T(n) = 4T(n/2) + n using repeated substitution.
+      Rubric (Total 4 pts): Unrolling (1), Summation formulation (1), Closed-form math (1), Big-O Conclusion (1).
+    question: |
+      Student Submission:
+      Unrolls perfectly, gets n sum 2^i, but the series formula is wrong.
+    answer: |
+      **Grade:** 2.0 / 4.0
 
-          **Feedback:** Missed closed-form math conversion and final conclusion.
-      - question: |
-          Student Submission:
-          Unrolls to sum 2^i * n, solves to 2n^2 - n, concludes O(n^3).
-        answer: |
-          **Grade:** 3.0 / 4.0
+      **Feedback:** Missed closed-form math conversion and final conclusion.
+  - context: |
+      You are evaluating Daniel's recurrence topic.
+      Question: Find asymptotic bound for T(n) = 4T(n/2) + n using repeated substitution.
+      Rubric (Total 4 pts): Unrolling (1), Summation formulation (1), Closed-form math (1), Big-O Conclusion (1).
+    question: |
+      Student Submission:
+      Unrolls to sum 2^i * n, solves to 2n^2 - n, concludes O(n^3).
+    answer: |
+      **Grade:** 3.0 / 4.0
 
-          **Feedback:** The unrolling and summation are correct, but the final Big-O bound is extremely loose/incorrect.
+      **Feedback:** The unrolling and summation are correct, but the final Big-O bound is extremely loose/incorrect.
