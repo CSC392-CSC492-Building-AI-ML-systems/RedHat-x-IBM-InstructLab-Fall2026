@@ -14,7 +14,9 @@
 # Submit from the repo folder on Fir:
 #   sbatch jobs/generate_data.sh program_correctness           # one topic
 #   sbatch jobs/generate_data.sh induction recurrences         # several topics
-#   sbatch jobs/generate_data.sh proof_grading                 # the grading skill only
+#   sbatch jobs/generate_data.sh skills                        # every skill entry
+#   sbatch jobs/generate_data.sh compositional_skills/grading/csc236/induction   # one skill
+# A plain name is a knowledge topic under taxonomy/knowledge/computer_science/csc236/.
 #   sbatch jobs/generate_data.sh all                           # the whole taxonomy/ folder
 #
 # Optional settings (put them before sbatch, e.g. `SCALE=30 sbatch jobs/generate_data.sh all`):
@@ -92,23 +94,28 @@ else
     rm -rf "$TAXONOMY"
     mkdir -p "$TAXONOMY"
     for t in "${TOPICS[@]}"; do
-        # Find the leaf folder with this name anywhere in the taxonomy (knowledge or skills),
-        # e.g. program_correctness or proof_grading, and copy it with its folder path.
-        mapfile -t MATCHES < <(cd "$REPO/taxonomy" && find . -type d -name "$t" -exec test -f {}/qna.yaml \; -print)
-        if [ ${#MATCHES[@]} -eq 0 ]; then
-            echo "ERROR: no taxonomy folder named '$t' with a qna.yaml. Check the topic name."
+        # A plain name is a knowledge topic; "skills" means every skill entry; anything with a
+        # slash is a path inside taxonomy/ (e.g. compositional_skills/grading/csc236/induction).
+        if [ "$t" = "skills" ]; then
+            mapfile -t RELS < <(cd "$REPO/taxonomy" && find compositional_skills -name qna.yaml -printf '%h\n' | sort)
+        elif [[ "$t" == */* ]]; then
+            RELS=("${t%/}")
+        else
+            RELS=("knowledge/computer_science/csc236/$t")
+        fi
+        if [ ${#RELS[@]} -eq 0 ]; then
+            echo "ERROR: no skill entries found under taxonomy/compositional_skills."
             exit 1
         fi
-        if [ ${#MATCHES[@]} -gt 1 ]; then
-            echo "ERROR: more than one taxonomy folder named '$t' has a qna.yaml:"
-            printf '  taxonomy/%s\n' "${MATCHES[@]#./}"
-            echo "Remove or rename the extra one(s)."
-            exit 1
-        fi
-        REL="${MATCHES[0]}"
-        mkdir -p "$TAXONOMY/$(dirname "$REL")"
-        cp -r "$REPO/taxonomy/$REL" "$TAXONOMY/$(dirname "$REL")/"
-        echo "Using taxonomy/${REL#./}"
+        for REL in "${RELS[@]}"; do
+            if [ ! -f "$REPO/taxonomy/$REL/qna.yaml" ]; then
+                echo "ERROR: taxonomy/$REL/qna.yaml not found. Check the topic name."
+                exit 1
+            fi
+            mkdir -p "$TAXONOMY/$(dirname "$REL")"
+            cp -r "$REPO/taxonomy/$REL" "$TAXONOMY/$(dirname "$REL")/"
+            echo "Using taxonomy/$REL"
+        done
     done
 fi
 echo "Taxonomy: $TAXONOMY"
