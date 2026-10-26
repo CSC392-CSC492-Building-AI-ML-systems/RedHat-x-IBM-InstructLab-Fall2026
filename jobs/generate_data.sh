@@ -14,6 +14,7 @@
 # Submit from the repo folder on Fir:
 #   sbatch jobs/generate_data.sh program_correctness           # one topic
 #   sbatch jobs/generate_data.sh induction recurrences         # several topics
+#   sbatch jobs/generate_data.sh proof_grading                 # the grading skill only
 #   sbatch jobs/generate_data.sh all                           # the whole taxonomy/ folder
 #
 # Optional settings (put them before sbatch, e.g. `SCALE=30 sbatch jobs/generate_data.sh all`):
@@ -89,14 +90,18 @@ if [ "${TOPICS[0]}" = "all" ]; then
 else
     TAXONOMY="$OUT/taxonomy"
     rm -rf "$TAXONOMY"
-    mkdir -p "$TAXONOMY/knowledge/computer_science/csc236"
+    mkdir -p "$TAXONOMY"
     for t in "${TOPICS[@]}"; do
-        SRC="$REPO/taxonomy/knowledge/computer_science/csc236/$t"
-        if [ ! -f "$SRC/qna.yaml" ]; then
-            echo "ERROR: $SRC/qna.yaml not found. Check the topic name."
+        # Find the leaf folder with this name anywhere in the taxonomy (knowledge or skills),
+        # e.g. program_correctness or proof_grading, and copy it with its folder path.
+        REL=$(cd "$REPO/taxonomy" && find . -type d -name "$t" -exec test -f {}/qna.yaml \; -print | head -n 1)
+        if [ -z "$REL" ]; then
+            echo "ERROR: no taxonomy folder named '$t' with a qna.yaml. Check the topic name."
             exit 1
         fi
-        cp -r "$SRC" "$TAXONOMY/knowledge/computer_science/csc236/"
+        mkdir -p "$TAXONOMY/$(dirname "$REL")"
+        cp -r "$REPO/taxonomy/$REL" "$TAXONOMY/$(dirname "$REL")/"
+        echo "Using taxonomy/${REL#./}"
     done
 fi
 echo "Taxonomy: $TAXONOMY"
