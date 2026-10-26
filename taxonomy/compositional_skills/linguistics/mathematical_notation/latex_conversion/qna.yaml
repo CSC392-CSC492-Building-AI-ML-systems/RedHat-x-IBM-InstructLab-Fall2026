@@ -1,0 +1,63 @@
+version: 2
+task_description: >-
+  Convert mathematical expressions described in natural language into equivalent LaTeX notation.
+created_by: your_username
+seed_examples:
+  - question: |
+      Express the sum of the squares of the first n positive integers using LaTeX.
+    answer: |
+      \[
+      \sum_{k=1}^{n} k^2
+      \]
+  - question: |
+      Express the fraction x squared plus one divided by two x using LaTeX.
+    answer: |
+      \[
+      \frac{x^2+1}{2x}
+      \]
+
+  # Level 2: Fractions and algebraic expressions
+  - question: |
+      Express the fraction whose numerator is x squared plus one
+      and whose denominator is two x using LaTeX.
+    answer: |
+      \[
+      \frac{x^2+1}{2x}
+      \]
+
+  # Level 3: Summations with compound terms
+  - question: |
+      Express the sum from i equals one to n of the fraction whose
+      numerator is i squared plus one and whose denominator is i plus one.
+    answer: |
+      \[
+      \sum_{i=1}^{n} \frac{i^2+1}{i+1}
+      \]
+
+  # Level 4: Piecewise-defined functions
+  - question: |
+      Write the following function in LaTeX: f of x equals x squared
+      when x is nonnegative, and negative x when x is negative.
+    answer: |
+      \[
+      f(x)=
+      \begin{cases}
+      x^2, & x \geq 0,\\
+      -x, & x < 0.
+      \end{cases}
+      \]
+
+  # Level 5: Quantifiers, implications, and nested inequalities
+  - question: |
+      Express the following statement in LaTeX:
+      For every epsilon greater than zero, there exists a delta
+      greater than zero such that, whenever zero is less than the
+      absolute value of x minus a and that value is less than delta,
+      the absolute value of f of x minus L is less than epsilon.
+    answer: |
+      \[
+      \forall \varepsilon > 0,\ \exists \delta > 0
+      \text{ such that }
+      0 < |x-a| < \delta
+      \implies |f(x)-L| < \varepsilon.
+      \]

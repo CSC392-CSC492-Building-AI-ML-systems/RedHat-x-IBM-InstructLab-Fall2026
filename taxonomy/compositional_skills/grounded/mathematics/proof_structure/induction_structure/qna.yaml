@@ -1,0 +1,110 @@
+version: 2
+task_description: >-
+  Identify the logical components of a mathematical induction proof, including the base case, induction hypothesis, and inductive step.
+created_by: your_username
+seed_examples:
+  - context: |
+      We prove that 1 + 2 + ... + n = n(n+1)/2 for all integers n >= 1.
+      The base case n = 1 holds because 1 = 1(1+1)/2.
+      Assume that 1 + 2 + ... + k = k(k+1)/2 for some integer k >= 1.
+      Then,
+      1 + 2 + ... + k + (k+1)
+      = k(k+1)/2 + (k+1)
+      = (k+1)(k+2)/2.
+      Thus the formula holds for k+1.
+    question: |
+      Identify the base case, induction hypothesis, and statement established in the inductive step.
+    answer: |
+      - Base case: n = 1, for which the formula holds because 1 = 1(1+1)/2.
+      - Induction hypothesis: Assume that
+        1 + 2 + ... + k = k(k+1)/2 for some integer k >= 1.
+      - Inductive step: Establish that
+        1 + 2 + ... + (k+1) = (k+1)(k+2)/2,
+        using the induction hypothesis.
+
+  # Level 2: Extract an inequality and its algebraic justification
+  - context: |
+      We prove by induction that 2^n >= n+1 for every integer n >= 0.
+      For n = 0, 2^0 = 1 >= 1.
+      Assume 2^k >= k+1 for some integer k >= 0.
+      Then 2^(k+1) = 2*2^k >= 2(k+1) >= k+2,
+      since k >= 0. Therefore, the inequality holds for k+1.
+    question: |
+      State the induction hypothesis and explain the two inequalities used to establish the inductive step.
+    answer: |
+      - Induction hypothesis: 2^k >= k+1 for an integer k >= 0.
+      - First inequality: 2^(k+1) = 2*2^k >= 2(k+1), by multiplying the induction hypothesis by 2.
+      - Second inequality: 2(k+1) >= k+2, because k >= 0 implies 2k+2 >= k+2.
+      - Inductive conclusion: 2^(k+1) >= k+2.
+
+  # Level 3: Identify the algebraic use of divisibility
+  - context: |
+      We prove that 3 divides n^3-n for every integer n >= 1.
+      For n = 1, 1^3-1 = 0, which is divisible by 3.
+      Assume 3 divides k^3-k for some integer k >= 1.
+      For the next integer,
+      (k+1)^3-(k+1)
+      = k^3+3k^2+3k+1-k-1
+      = (k^3-k)+3k(k+1).
+      The first term is divisible by 3 by the induction hypothesis,
+      and the second term is divisible by 3 because it is a multiple
+      of 3. Their sum is therefore divisible by 3.
+    question: |
+      Identify the induction hypothesis and explain how the algebraic decomposition establishes divisibility for k+1.
+    answer: |
+      - Base case: n = 1, since 1^3-1 = 0 = 3*0.
+      - Induction hypothesis: 3 divides k^3-k.
+      - Key decomposition:
+        (k+1)^3-(k+1) = (k^3-k)+3k(k+1).
+      - Justification: The induction hypothesis makes k^3-k divisible by 3, and 3k(k+1) is also divisible by 3.
+        Therefore their sum is divisible by 3.
+      - Inductive conclusion: 3 divides (k+1)^3-(k+1).
+
+  # Level 4: Identify a strong induction hypothesis
+  - context: |
+      We prove that every integer n >= 2 is a product of primes.
+      Base case: n = 2, which is itself prime and hence a product
+      consisting of one prime.
+      Assume that every integer m with 2 <= m <= k is a product
+      of primes, where k >= 2.
+      Consider k+1. If k+1 is prime, it is already a product of primes.
+      Otherwise, k+1 = ab for integers a,b satisfying 2 <= a,b <= k.
+      By the induction hypothesis, both a and b are products of primes.
+      Their product k+1 is therefore a product of primes.
+    question: |
+      Identify the strong induction hypothesis, distinguish the two cases in the inductive step, and explain why both cases establish the desired conclusion for k+1.
+    answer: |
+      - Base case: n = 2, which is prime.
+      - Strong induction hypothesis: Every integer m satisfying
+        2 <= m <= k is a product of primes.
+      - Case 1: If k+1 is prime, it is a product of primes
+        consisting of itself.
+      - Case 2: If k+1 is composite, write k+1 = ab, where 2 <= a,b <= k. The strong induction hypothesis applies to both a and b, so each is a product of primes.
+        - Multiplying their prime factorizations gives a prime factorization of k+1.
+      - Conclusion: Every integer n >= 2 is a product of primes.
+
+  # Level 5: Track dependencies and quantify the induction claim
+  - context: |
+      Define the Fibonacci sequence by F_0 = 0, F_1 = 1, and F_n = F_(n-1) + F_(n-2) for every integer n >= 2.
+      We prove that F_n <= 2^n for every integer n >= 0.
+      Base cases: F_0 = 0 <= 1 = 2^0 and F_1 = 1 <= 2 = 2^1.
+      Assume for some k >= 1 that F_j <= 2^j for every integer j satisfying 0 <= j <= k.
+      By the recurrence and the induction hypothesis,
+      F_(k+1) = F_k + F_(k-1)
+      <= 2^k + 2^(k-1)
+      <= 2^k + 2^k
+      = 2^(k+1).
+      Hence the inequality holds for k+1.
+    question: |
+      State the proposition being proved, explain why two base cases are needed, identify the strong induction hypothesis, and show how the recurrence uses that hypothesis to establish the inductive step.
+    answer: |
+      - Proposition: F_n <= 2^n for every integer n >= 0.
+      - Base cases: n = 0 and n = 1. Both are established directly.
+        Two base cases are needed because the recurrence for F_n depends on the two preceding terms.
+      - Strong induction hypothesis: F_j <= 2^j for every integer j with 0 <= j <= k.
+      - Dependency: The recurrence for F_(k+1) requires bounds on both F_k and F_(k-1). Both bounds follow from the hypothesis.
+      - Inductive step:
+        F_(k+1) = F_k + F_(k-1)
+        <= 2^k + 2^(k-1)
+        <= 2^(k+1).
+      - Conclusion: F_n <= 2^n for every integer n >= 0.
