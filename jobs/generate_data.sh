@@ -25,6 +25,7 @@
 #           <think> text ends up in the data), so only use it if that's been fixed.
 #   MODEL   path to the teacher model folder (overrides the TEACHER default path)
 #   SCALE   --sdg-scale-factor (default 5, small for testing)
+#   GEN_ARGS extra options for `ilab data generate`, e.g. GEN_ARGS="--batch-size 4 --num-cpus 4"
 #   OUT     output folder (default ~/scratch/sdg/<teacher>/<topics>). Reuse the same OUT to resume.
 # To change the time limit:  sbatch --time=12:00:00 jobs/generate_data.sh ...
 # To avoid known bad nodes:  sbatch --exclude=fc10518,fc10515 jobs/generate_data.sh ...
@@ -74,6 +75,7 @@ mkdir -p "$OUT"
 echo "Job $SLURM_JOB_ID on $(hostname), started $(date)"
 echo "Topics: ${TOPICS[*]}   Scale factor: $SCALE   Output: $OUT   Port: $PORT"
 echo "Teacher: $TEACHER ($MODEL_PATH)"
+[ -n "$GEN_ARGS" ] && echo "Extra ilab data generate options: $GEN_ARGS"
 
 # ---- Checks that need no GPU -------------------------------------------------------
 if [ ! -f "$MODEL_PATH/config.json" ]; then
@@ -187,7 +189,8 @@ ilab data generate \
     --taxonomy-path "$TAXONOMY" \
     --taxonomy-base empty \
     --sdg-scale-factor "$SCALE" \
-    --output-dir "$OUT"
+    --output-dir "$OUT" \
+    $GEN_ARGS
 
 echo "Done at $(date). Output is in $OUT"
 echo "Scratch is purged of old files: copy anything worth keeping to the team folder."
