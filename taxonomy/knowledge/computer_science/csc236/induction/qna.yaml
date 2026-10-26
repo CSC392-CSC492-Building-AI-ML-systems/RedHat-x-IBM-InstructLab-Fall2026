@@ -8,12 +8,12 @@ seed_examples:
       A predicate is a parametrized logical statement; that is, it can be viewed as a function that takes in one or more arguments and outputs either True or False. Every predicate has a domain: the set of its possible input values. Predicates abstract away the details of complex statements, giving us a precise way to formulate mathematical problems.
 
       Some examples of predicates include: EV(n) : n is even. GR(x, y) : x > y. FROSH(a) : a is a first-year university student.
-      
+
       The Principle of Simple Induction is a proof technique that is used to establish that a predicate P(n) is true all integers greater than some specified natural number b. To prove that a predicate P(n) is true for all natural numbers n, we use the following chain of reasoning analogous to falling dominoes:
       (1) Base case: Prove that P(b) is true, for some starting natural number b.
       (2) Induction step: Devise an induction hypothesis, which is that P(k) for some k >= b. Suppose the induction hypothesis is true. Prove that if P(k) is true then P(k+1) also holds.
       (3) Conclusion: We can then conclude that for all natural numbers n greater than b, P(n) is true.
-      
+
       Formally, the Principle of Simple Induction is expressed symbolically as:
       (P(0) and (forall k in N, P(k) => P(k+1))) => forall n in N, P(n).
     questions_and_answers:
@@ -26,7 +26,7 @@ seed_examples:
   # Add 4 more context blocks (5 total), each with 3 Q&A pairs.
   - context: |
       Problem: Prove that for all n >= 1, any 2^n-by-2^n chessboard with one corner missing can be tiled with triominoes (three-square L-shaped figures).
-      
+
       Proof:
       Base Case: n = 1. A 2-by-2 chessboard with one corner missing is identical in shape to a single triomino, so it can be tiled.
       Induction Step: Let k >= 1 and assume the Induction Hypothesis that every 2^k-by-2^k chessboard with one corner missing can be tiled with triominoes.
@@ -44,7 +44,7 @@ seed_examples:
       In Simple Induction, when proving P(k+1), we only assume P(k). In Complete Induction, we retain all previous statements and assume that P(0), P(1), ..., P(k) are all true.
       The Principle of Complete Induction is stated as:
       (P(0) and (forall k, (P(0) and P(1) and ... and P(k)) => P(k+1))) => forall n, P(n).
-      
+
       Example Theorem: Every natural number greater than 1 has a prime factorization.
       1. Base Case: n = 2 is prime, so it is a product of one prime (itself).
       2. Induction Step: Let k >= 2 and assume for all 2 <= i <= k that P(i) holds. For k+1, if k+1 is prime, P(k+1) holds. If k+1 is composite, k+1 = ab for integers 2 <= a, b <= k. By the induction hypothesis, both a and b have prime factorizations; multiplying these gives the prime factorization of k+1.
@@ -58,7 +58,7 @@ seed_examples:
 
   - context: |
       Sometimes, it is not immediately useful to induct over natural numbers. For example, we would like to show a property holds for all elements of a recursively-defined set.
-      
+
       First, we need a definition of recursively-defined sets. Sets can be defined recursively using base rules (simplest elements) and recursive rules.
       For example, the set of non-empty binary trees is defined as:
       - Base rule: A single node is a non-empty binary tree.
@@ -66,7 +66,7 @@ seed_examples:
         the roots of T1 and T2 creates a non-empty binary tree.
       - Recursive rule 2: If T1 is a non-empty binary tree, attaching a new root r to the root
         of T1 (to the left or right) creates a non-empty binary tree.
-      
+
       Structural induction proves a property P(T) holds for all elements of a recursively defined set by showing:
       (1) Base Case: P holds for all base elements (e.g., a single node has 1 node and 0 edges, so V = E + 1).
       (2) Induction Step: For each recursive rule, assuming P holds for the components, P holds for the newly constructed tree.
@@ -84,7 +84,7 @@ seed_examples:
       - (0,0) in S
       - If (a,b) in S, then (a+1, b+1) in S and (a+3, b) in S.
       And set S' = {(x,y) in N x N | x >= y and 3 | (x - y)}.
-      
+
       To prove S = S', we show two way inclusion:
       Part 1 (S subset of S'): Use structural induction on the construction of S. The base case (0,0) satisfies 0 >= 0 and 3 | 0, meaning (0,0) is in both S and S'. Now suppose (a,b) is in both S and S'. Consider the constructors of S. For (a+1, b+1), (a+1) - (b+1) = a - b, which by hypothesis is assumed to be in S'. For (a+3, b), (a+3) - b = (a - b) + 3, which is also divisible by 3 according to the induction hypothesis.
       Part 2 (S' subset of S): Associate each pair (x,y) with natural number n = x + y, and use complete induction on n to show every pair in S' is in S.
@@ -96,7 +96,7 @@ seed_examples:
       - question: In the structural induction step showing S subset of S', why does (a+1, b+1) satisfy the divisibility condition?
         answer: Because (a + 1) - (b + 1) simplifies to a - b, which is divisible by 3 by the induction hypothesis.
 
-  
+
 document:
   repo: https://github.com/CSC392-CSC492-Building-AI-ML-systems/RedHat-x-IBM-InstructLab-Fall2026.git       # must contain the markdown at the commit below
   commit: d4fd7dd70bb5ef67df48d88ca57f5c6cf29a4f22
