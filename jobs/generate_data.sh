@@ -94,11 +94,18 @@ else
     for t in "${TOPICS[@]}"; do
         # Find the leaf folder with this name anywhere in the taxonomy (knowledge or skills),
         # e.g. program_correctness or proof_grading, and copy it with its folder path.
-        REL=$(cd "$REPO/taxonomy" && find . -type d -name "$t" -exec test -f {}/qna.yaml \; -print | head -n 1)
-        if [ -z "$REL" ]; then
+        mapfile -t MATCHES < <(cd "$REPO/taxonomy" && find . -type d -name "$t" -exec test -f {}/qna.yaml \; -print)
+        if [ ${#MATCHES[@]} -eq 0 ]; then
             echo "ERROR: no taxonomy folder named '$t' with a qna.yaml. Check the topic name."
             exit 1
         fi
+        if [ ${#MATCHES[@]} -gt 1 ]; then
+            echo "ERROR: more than one taxonomy folder named '$t' has a qna.yaml:"
+            printf '  taxonomy/%s\n' "${MATCHES[@]#./}"
+            echo "Remove or rename the extra one(s)."
+            exit 1
+        fi
+        REL="${MATCHES[0]}"
         mkdir -p "$TAXONOMY/$(dirname "$REL")"
         cp -r "$REPO/taxonomy/$REL" "$TAXONOMY/$(dirname "$REL")/"
         echo "Using taxonomy/${REL#./}"
