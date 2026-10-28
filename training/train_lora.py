@@ -3,7 +3,8 @@
 Run on a GPU node from the repo folder:
     python training/train_lora.py training/lora.yaml
 For a quick test, --data, --output and --max-steps replace the file's
-data and output folder and stop after a few steps.
+data and output folder and stop after a few steps. --resume continues a
+run from its last saved checkpoint, for example after a job hits its time limit.
 """
 import argparse
 import shutil
@@ -21,6 +22,7 @@ parser.add_argument("settings")
 parser.add_argument("--data")
 parser.add_argument("--output")
 parser.add_argument("--max-steps", type=int, default=-1)
+parser.add_argument("--resume", action="store_true")
 args = parser.parse_args()
 
 with open(args.settings) as f:
@@ -75,7 +77,10 @@ trainer = SFTTrainer(
         warmup_steps=10,
         optim="adamw_8bit",
         logging_steps=1,
-        save_strategy="no",
+        # Save a checkpoint every so often, keeping only the latest two.
+        save_strategy="steps",
+        save_steps=cfg["save_steps"],
+        save_total_limit=2,
         output_dir=str(out),
         report_to="none",
         seed=cfg["seed"],
@@ -89,7 +94,7 @@ trainer = train_on_responses_only(
     response_part="<|im_start|>assistant\n",
 )
 
-trainer.train()
+trainer.train(resume_from_checkpoint=args.resume or None)
 print(f"Peak GPU memory: {torch.cuda.max_memory_reserved() / 2**30:.1f} GiB")
 model.save_pretrained(out)
 tokenizer.save_pretrained(out)

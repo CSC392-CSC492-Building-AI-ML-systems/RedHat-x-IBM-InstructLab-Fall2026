@@ -48,7 +48,6 @@ pillow_simd==12.1.1.post0+computecanada
 propcache==0.5.4+computecanada
 protobuf==7.36.2+computecanada
 psutil==7.2.2+computecanada
-pyarrow @ file:///tmp/ebuser/avx512/Arrow/25.0.0/GCCcore-14.3-gentoo/arrow/python
 pydantic==2.14.1+computecanada
 pydantic_core==2.50.1+computecanada
 pygments==2.21.0+computecanada

@@ -10,6 +10,8 @@
 # Submit from the repo folder:  sbatch jobs/train_lora.sh
 # For a quick test on a small file, which stops after 10 steps:
 #   sbatch --time=1:00:00 jobs/train_lora.sh --data data/generated/seed_qna.jsonl --output models/adapters/test --max-steps 10
+# If a run hits the time limit, continue it from its last checkpoint:
+#   sbatch jobs/train_lora.sh --resume
 # The log (in your home folder) shows the training loss as it goes.
 
 # The arrow module provides pyarrow, and the training code compiles some GPU
