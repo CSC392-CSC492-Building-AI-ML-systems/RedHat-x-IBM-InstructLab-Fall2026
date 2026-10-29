@@ -1,0 +1,15 @@
+# Questions for training/compare_adapter.py, one per line. Lines starting with # are skipped.
+# The Master Theorem question checks a wrong answer seen in the training data
+# (it said exponential time, but the answer is n^2).
+# The last question isn't about the course. It checks that the model didn't
+# get worse at ordinary questions.
+What is the difference between simple induction and complete induction, and when do you need complete induction?
+In a structural induction proof about non-empty binary trees, why does the induction step have two parts?
+Using the Master Theorem, what is the asymptotic solution of T(n) = 4T(n/2) + n?
+How are floors and ceilings handled when writing recurrences in CSC236?
+What is a loop variant, and what loop variant shows that the loop in avg terminates?
+Why must a loop invariant still hold at the last loop check, when the loop condition is false?
+What is the order of precedence of the operations in a regular expression, and why does (0+1)* need brackets?
+Can allowing nondeterminism or epsilon-transitions let an automaton accept a language that no DFA accepts?
+What condition on a DFA's states makes it accept the empty string?
+Write a short Python function that checks whether a string is a palindrome.
