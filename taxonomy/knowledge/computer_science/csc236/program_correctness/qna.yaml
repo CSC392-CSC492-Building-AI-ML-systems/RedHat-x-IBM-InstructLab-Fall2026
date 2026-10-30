@@ -2,7 +2,8 @@ version: 3
 created_by: Raynard02
 domain: computer_science
 document_outline: |
-  One or two sentences: what this topic covers and which course documents are used.
+  Program correctness in CSC236: preconditions and postconditions, proving recursive
+  functions correct, and loop invariants and loop variants for iterative code.
 seed_examples:
   - context: |
       You may be familiar with the most common tools used to specify program correctness, preconditions and postconditions. Formally, a precondition of a function is a property that an input to the function must satisfy in order to guarantee that the function will work properly. A postcondition of a function is a property that must be satisfied after the function completes. Most commonly, this refers to properties of a return value, though it can also refer to changes to the variables passed in as with the implementation of quicksort from the previous chapter (which didn’t return anything but instead changed the input list A). So preconditions tell us what must be true before the program starts, and postconditions tell us what must be true after the program terminates (assuming it ends at all). We have the following formal statement of correctness. Though it is written in more formal language, note that it really captures what we mean when we say that a program is “correct.” Definition (Program Correctness). Let f be a function with a set of preconditions and postconditions. Then f is correct (with respect to the pre- and postconditions) if the following holds, For every input I to f, if I satisfies the preconditions, then f(I) terminates, and all the postconditions hold after it terminates.

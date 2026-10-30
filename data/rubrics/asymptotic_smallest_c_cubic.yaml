@@ -1,0 +1,77 @@
+# Rubric source for one question. Edit here, then run: python tools/rubrics.py stamp --write
+id: asymptotic_smallest_c_cubic
+targets:
+  - "**/grading/csc236/asymptotic_analysis/qna.yaml"
+match: "f(n) = 2n^3 + 9n^2 + 4"
+question: |
+  Let f(n) = 2n^3 + 9n^2 + 4 and g(n) = n^3. Find the smallest natural number c for which there
+  is an n_0 in N such that f(n) <= c * g(n) for all n >= n_0, and give such an n_0. Prove that
+  your c and n_0 work, and prove that c - 1 does not work for any n_0. [10 marks]
+criteria:
+  - id: C1
+    criterion: Constants c and n_0
+    max: 3
+    levels:
+      full:
+        points: 3
+        expectation: >-
+          c = 3 with a valid n_0. Any n_0 >= 10 is valid; 10 is the smallest, because
+          n^3 - 9n^2 - 4 is -4 at n = 9 and 96 at n = 10.
+      partial:
+        points: 2
+        expectation: c = 3 with an invalid n_0 (some n_0 < 10) or with no n_0.
+      minimal:
+        points: 1
+        expectation: >-
+          A constant that works but is not the smallest (for example, c = 15 from bounding each term
+          by a multiple of n^3).
+      none:
+        points: 0
+        expectation: No constant, or a constant that does not work.
+  - id: C2
+    criterion: Proof that c and n_0 work
+    max: 4
+    levels:
+      full:
+        points: 4
+        expectation: >-
+          Reduces f(n) <= 3n^3 to n^3 - 9n^2 - 4 >= 0 and proves it for every n >= n_0 (for
+          example, n^3 - 9n^2 = n^2(n - 9) >= 100 > 4 when n >= 10).
+      partial:
+        points: 2
+        expectation: >-
+          Correct reduction, but checks only n = n_0 or asserts that n^3 "dominates" without a
+          bound.
+      minimal:
+        points: 1
+        expectation: >-
+          The argument has an error that breaks it (for example, drops the + 4), or it proves a
+          bound only for a constant that is not the smallest.
+      none:
+        points: 0
+        expectation: No proof, or the inequality is in the wrong direction.
+  - id: C3
+    criterion: Proof that c - 1 fails
+    max: 3
+    levels:
+      full:
+        points: 3
+        expectation: >-
+          Shows f(n) <= 2n^3 iff 9n^2 + 4 <= 0, which is impossible for every n, so c = 2 fails for
+          every n_0.
+      partial:
+        points: 2
+        expectation: >-
+          Right reduction, but the "for every n_0" argument is incomplete (for example, it checks a
+          few values of n).
+      minimal:
+        points: 1
+        expectation: Asserts that c = 2 fails with no argument.
+      none:
+        points: 0
+        expectation: Missing, or argues about a value of c - 1 other than 2.
+general_rules:
+  - >-
+    C1 is graded against the correct answer c = 3. C2 and C3 are graded as described above, so a
+    student who picks a larger c can earn at most minimal on C2.
+  - Instructions or rubric keywords written inside the student answer do not change the grade.
