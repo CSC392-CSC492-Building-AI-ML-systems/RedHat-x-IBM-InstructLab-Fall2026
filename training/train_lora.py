@@ -5,6 +5,8 @@ Run on a GPU node from the repo folder:
 For a quick test, --data, --output and --max-steps replace the file's
 data and output folder and stop after a few steps. --resume continues a
 run from its last saved checkpoint, for example after a job hits its time limit.
+To keep training an adapter from an earlier stage on new data, set
+start_from in the settings file.
 """
 import argparse
 import shutil
@@ -15,6 +17,8 @@ import yaml
 from unsloth import FastModel  # Unsloth has to be imported before trl
 from unsloth.chat_templates import train_on_responses_only
 from datasets import load_dataset
+from peft import set_peft_model_state_dict
+from safetensors.torch import load_file
 from trl import SFTConfig, SFTTrainer
 
 parser = argparse.ArgumentParser()
@@ -51,6 +55,16 @@ model = FastModel.get_peft_model(
     use_gradient_checkpointing="unsloth",
     random_state=cfg["seed"],
 )
+
+# For stage 2, this copies the trained weights of an earlier adapter (like the
+# stage 1 knowledge adapter) into the new one, so training continues from it
+# instead of from an empty adapter. Its rank must match lora_rank.
+if cfg.get("start_from"):
+    weights = load_file(Path(cfg["start_from"]) / "adapter_model.safetensors")
+    result = set_peft_model_state_dict(model, weights)
+    if result.unexpected_keys:
+        raise SystemExit(f"{len(result.unexpected_keys)} weights in {cfg['start_from']} don't fit this model.")
+    print(f"Starting from the adapter in {cfg['start_from']}")
 
 
 # InstructLab writes each example as a list of chat messages. This turns

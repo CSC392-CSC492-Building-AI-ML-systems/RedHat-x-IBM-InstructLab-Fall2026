@@ -8,6 +8,7 @@
 #SBATCH --output=/home/%u/%x-%j.log
 # Fine-tune Qwen3.8-27B with LoRA on one H100, using the settings in training/lora.yaml.
 # Submit from the repo folder:  sbatch jobs/train_lora.sh
+# To use another settings file, give it first:  sbatch jobs/train_lora.sh training/stage2.yaml
 # For a quick test on a small file, which stops after 10 steps:
 #   sbatch --time=1:00:00 jobs/train_lora.sh --data data/generated/seed_qna.jsonl --output models/adapters/test --max-steps 10
 # If a run hits the time limit, continue it from its last checkpoint:
@@ -21,5 +22,7 @@ module load gcc arrow/25.0.0 python/3.13 cuda/12.9
 set -e
 cd "$SLURM_SUBMIT_DIR"
 source env/train/.venv/bin/activate
+settings=training/lora.yaml
+if [[ "$1" == *.yaml ]]; then settings=$1; shift; fi
 # -u writes to the log right away, instead of holding text back in batches.
-python -u training/train_lora.py training/lora.yaml "$@"
+python -u training/train_lora.py "$settings" "$@"

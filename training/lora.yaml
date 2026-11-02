@@ -4,6 +4,9 @@
 base_model: models/Qwen3.8-27B
 data: data/generated/stage1_2026-10-28/train.jsonl   # knowledge only, made by training/prepare_data.py
 output: models/adapters/stage1_2026-10-28            # where the trained adapter is saved (not in git)
+# Leave empty to start a new adapter. For stage 2, put an adapter folder here
+# (like models/adapters/stage1_2026-10-28) to keep training it on the new data.
+start_from:
 
 # false trains on the full 16 bit model. true is QLoRA, which shrinks the
 # model to 4 bits and uses far less memory. Switch to true if it runs out of memory.
