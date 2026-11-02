@@ -59,16 +59,15 @@
 \newtheorem{definition}{Definition}
 
 %---------------------------- Title -------------------------------------------
-\title{\textbf{\gradeai: Synthetic Data Generation, InstructLab, and Open-Weights LLMs for Privacy-Preserving Automated Proof Grading and Uncertainty-Aware Triage (blah) }\\[0.6em]
-\large CSC398H5: Topics in Computer Science --- Building Ethical Software Solutions
-with Industry Collaboration (Red Hat $\times$ IBM InstructLab, Fall 2026)}
+\title{\textbf{\gradeai: InstructLab and Open-Weights LLMs for Privacy-Preserving Automated Student Proof Grading (blah) }\\[0.6em]
+\large CSC398H5: Topics in Computer Science --- Building Ethical Software Solutions with Industry Collaboration \\
+(Red Hat $\times$ IBM InstructLab, Fall 2026)}
 
 
 \author{%
-  Name 1 \and Name 2 \and Name 3 \and Name 4 \and Name 5\\[0.5em]
+  Name 1 \hspace{0.5em} Name 2 \hspace{0.5em} Name 3 \hspace{0.5em} Name 4 \hspace{0.5em} Name 5\\[0.5em]
   University of Toronto Mississauga\\
   Department of Mathematical and Computational Sciences
-  % TODO [All]: Add emails / roles if required by the instructor.
 }
 \date{December 7, 2026}
 
@@ -94,17 +93,15 @@ Confidence is estimated by \todo{}{Estimate confidence}, and submissions with lo
 \section{Introduction}\label{sec:intro}
 
 \paragraph{Context.}
-Proof writing is a core skill in foundational theory courses such as UTM's CSC236
-(Introduction to the Theory of Computation) and MAT102 (Introduction to Mathematical Proofs).
-Students are assessed on induction proofs over sums, inequalities, divisibility, recurrences,
-and finite automata.
+Proof writing is a core skill in foundational theory courses such as UTM's CSC236 (Introduction to the Theory of Computation) and MAT102 (Introduction to Mathematical Proofs).
+CSC236 students in particular are assessed on proofs covering a variety of topics. Such proofs may be inductive or analytic in nature, and TAs are expected to grade them accurately.
 
 \paragraph{The grading problem.}
-Grading such work is (i) labour-intensive, with multi-week feedback delays at high enrollment; (ii) inconsistent, since TAs differ in how they \todo{}{action}; and (iii) sensitive, since coursework is student intellectual
-property governed by university policy and privacy legislation (FIPPA in Ontario).
+Grading such work is (i) labour-intensive, with large delays in feedback in high enrollment classes; (ii) inconsistent, since TAs may differ in opinion; and (iii) sensitive, since coursework is student intellectual property governed by university policy and privacy legislation (FIPPA in Ontario).
 
 \paragraph{The privacy paradox.}
-General-purpose LLMs are an obvious first tool, but sending ungraded work to commercial APIs is not permitted, and in our experience zero-shot models often grade on \todo{}{maybe?}
+Using general-purpose LLMs is an obvious first attempt to address the high labour issue. However, sending ungraded work to commercial APIs is not permitted. 
+Additionally, in our experience \todo{}{change to empirical evidence}, zero-shot models are far less consistent than TAs. 
 
 \todo{}{Support this claim with our zero-shot baseline numbers from \cref{sec:results}, or soften it.}
 
@@ -113,7 +110,7 @@ We present \gradeai{}, and make four contributions:
 \begin{enumerate}[leftmargin=*,itemsep=2pt]
   \item An open-weights proof-grading pipeline fine-tuned on synthetic rubric data generated with InstructLab.
   \item An output schema and a self-consistency confidence metric ($k=XXX$).
-  \item A human-in-the-loop triage system that routes uncertain proofs to human TAs. \todo{}{?}
+  \item A human-in-the-loop triage system that routes uncertain proofs to human TAs. 
   \item An empirical evaluation of grading accuracy, semantic invariance, and error concentration, with an ablation of knowledge vs.\ skill fine-tuning.
 \end{enumerate}
 
