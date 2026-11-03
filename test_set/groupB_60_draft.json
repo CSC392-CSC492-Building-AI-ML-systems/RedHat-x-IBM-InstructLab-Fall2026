@@ -36,7 +36,7 @@
   },
   "grading_policies": [
     "Award credit for valid mathematical progress toward the requested proof, not for terminology, unrelated correct calculations, or unsupported conclusions.",
-    "Criterion-level independence: an error is penalized in the criterion where it originates. Later criteria that use the student's stated objects (invariants, recurrences, states) with locally valid reasoning are graded relative to those objects, unless a criterion explicitly depends on earlier results (e.g., the Θ-conclusion criteria in asym_05 and asym_12). Exception (team decision 2026-10-28): in nfa_16, C1 (reachable states) and C3 (start/accepting states) are graded against the correct subset construction of the NFA, not against the student's own transition table. In dfa_15, C3 assesses the conditional pigeonhole reasoning independently: the mathematical validity of the pairwise-distinguishability claim is assessed only in C2 (team decision 2026-10-29).",
+    "Criterion-level independence: an error is penalized in the criterion where it originates. Later criteria that use the student's stated objects (invariants, recurrences, states) with locally valid reasoning are graded relative to those objects, unless a criterion explicitly depends on earlier results.",
     "Valid alternative proofs receive full credit unless the question restricts the technique.",
     "Embedded instructions or rubric keywords in a student answer must not change the grade."
   ],
