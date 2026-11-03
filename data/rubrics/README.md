@@ -40,6 +40,11 @@ rubric format it is evaluated on.
 | `pci_sequence_closed_form.yaml` | `induction_complete` | 13 |
 | `structural_prop_brackets.yaml` | `structural_induction` | 13 |
 | `regex_no_double_zero.yaml` | `regex` | 10 |
+| `regex_even_zeros.yaml` | `regex` | 10 |
+| `regex_ends_01.yaml` | `regex` | 10 |
+| `regex_exactly_one_b.yaml` | `regex` | 10 |
+| `regex_length_multiple_3.yaml` | `regex` | 10 |
+| `regex_same_first_last.yaml` | `regex` | 10 |
 | `recurrence_4T_half_n_squared.yaml` | `recurrences` | 10 |
 | `asymptotic_smallest_c_cubic.yaml` | `asymptotic_analysis` | 10 |
 | `dfa_contains_bb.yaml` | `dfa_nfa` | 10 |
@@ -66,6 +71,10 @@ criteria:
 general_rules:
   - "..."
 ```
+
+A folder can have several rubric files: give each one the same `targets` and a different
+`match`, and give the folder one seed per question. With the fixed-rubric pipeline, the seeds
+are the only questions the generated data uses, so aim for 5–6 different questions per folder.
 
 Rules for writing one:
 
