@@ -7,16 +7,21 @@ made up. This copy skips that step: each seed's own question and rubric are used
 unchanged, and the teacher only writes new student answers and grades them.
 Every other step is ilab's own.
 
-Two optional changes, both recommended for the grading skills:
+Three optional changes, all recommended for the grading skills:
   --strict-grading      Use a copy of ilab's response prompt with extra rules that tell the
                         teacher to give credit only for what the student answer actually
                         writes, keep the arithmetic consistent, and grade once.
+  --varied-answers      Use a copy of ilab's question prompt that says each "question" is a
+                        student answer, forbids copying the question or rubric into it, and
+                        asks for mostly flawed answers (about one in five fully correct).
+                        Without it the teacher writes mostly correct answers.
   --skip-question-eval  Remove ilab's question check. It judges "questions" with a generic
                         prompt that wants them 1 to 2 sentences long, so it throws away
                         multi-line student proofs. The filter script checks rows instead.
 
 Run in the ilab environment, from the repo folder:
-    python3 tools/make_fixed_rubric_pipeline.py --strict-grading --skip-question-eval "$PWD/pipelines/fixed_rubric"
+    python3 tools/make_fixed_rubric_pipeline.py --strict-grading --varied-answers --skip-question-eval \
+        "$PWD/pipelines/fixed_rubric"
 Then give the folder to ilab with --pipeline, using an absolute path:
     GEN_ARGS="--pipeline $PWD/pipelines/fixed_rubric" sbatch jobs/generate_data.sh \
         compositional_skills/grounded/grading/csc236/regex
@@ -47,9 +52,21 @@ STRICT_RULES = """\
 * Write the grade once. Do not revise it, add corrections or give a second version.
 """
 
+ANSWER_RULES = """\
+* Here each "question" is a student's answer to the question in the context, written the way a
+  student would write it, starting with "Student Answer:". Return only the student answer, with
+  no grade or feedback.
+* Never copy the context, the question or the rubric into a student answer.
+* Vary the quality of the answers: about one in five should be fully correct, and the others
+  should contain one or more of the mistakes that the rubric's partial, minimal and none levels
+  describe. Make each answer different from the example and from the others.
+"""
+REPLACED_LINE = "* Simply return the questions, do not return any answers or explanations.\n"
+
 parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 parser.add_argument("folder", help="where to write the pipeline (use an absolute path with ilab)")
 parser.add_argument("--strict-grading", action="store_true", help="use the stricter response prompt")
+parser.add_argument("--varied-answers", action="store_true", help="use the student-answer question prompt")
 parser.add_argument("--skip-question-eval", action="store_true", help="remove ilab's question check")
 args = parser.parse_args()
 
@@ -81,6 +98,15 @@ for name in ("knowledge.yaml", "freeform_skills.yaml", "grounded_skills.yaml"):
         # Ask for new student answers SCALE times per seed, with the same
         # settings ilab used to ask for new contexts.
         blocks[1]["config"]["gen_kwargs"] = {"temperature": 0.7, "n": "scaled", "seed": 42}
+
+        if args.varied_answers:
+            questions = blocks[1]
+            prompt = yaml.safe_load(Path(questions["config"]["config_path"]).read_text())
+            assert REPLACED_LINE in prompt["principles"], "ilab's question prompt changed; update ANSWER_RULES placement"
+            prompt["principles"] = prompt["principles"].replace(REPLACED_LINE, ANSWER_RULES)
+            answers_path = out / "grounded_questions_student_answers.yaml"
+            answers_path.write_text(yaml.safe_dump(prompt, sort_keys=False, width=4096))
+            questions["config"]["config_path"] = str(answers_path)
 
         if args.skip_question_eval:
             blocks[:] = [b for b in blocks if b["name"] not in ("eval_grounded_questions", "filter_grounded_questions")]

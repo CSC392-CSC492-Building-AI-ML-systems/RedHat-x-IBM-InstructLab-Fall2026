@@ -20,6 +20,10 @@ Grading rows (taxonomy paths containing "grading") are dropped when:
   total_line            the "Total: a + b = x" line is missing, wrong, or not last
   self_correction       the answer revises itself ("Wait", "Revised feedback", ...)
   template_token        the prompt or answer contains a <|...|> chat-template token
+  answer_is_prompt      the "student answer" is a copy of the question or rubric
+  duplicate_answer      the same student answer to the same question was already kept
+  regex_grade_wrong     (regex rubrics only) C1 or C2 disagrees with a brute-force test of the
+                        student's regular expression on every string up to length 8
 
 Knowledge rows: <|...|> tokens are removed from prompts; rows are dropped when the answer
 contains such a token, has fewer than 8 words, or stops mid-sentence (keep those with
@@ -35,6 +39,7 @@ Requires: pip install ruamel.yaml (for reading the rubric files).
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import re
 import sys
@@ -54,6 +59,17 @@ LINE_RE = re.compile(
     r"^\s*-\s*(C\d+)\b[^\n]*?:\s*\**(full|partial|minimal|none)\**\s*\((\d+(?:\.\d+)?)\s*/\s*(\d+(?:\.\d+)?)\)",
     re.M | re.I)
 FINISHED_RE = re.compile(r"[.!?)\]$`*\"'|]\s*$")
+# Languages for the regex rubrics, so C1 (soundness) and C2 (completeness) can be checked by
+# testing the student's expression. Add an entry when you add a regex rubric file.
+REGEX_LANGUAGES = {
+    "regex_no_double_zero": ("01", lambda w: "00" not in w),
+    "regex_even_zeros": ("01", lambda w: w.count("0") % 2 == 0),
+    "regex_ends_01": ("01", lambda w: w.endswith("01")),
+    "regex_exactly_one_b": ("ab", lambda w: w.count("b") == 1),
+    "regex_length_multiple_3": ("01", lambda w: len(w) % 3 == 0),
+    "regex_same_first_last": ("ab", lambda w: len(w) > 0 and w[0] == w[-1]),
+}
+REGEX_MAX_LEN = 8
 KNOWLEDGE = ("document_knowledge_qa", "document_knowledge_qa_raft_p0.4")
 
 
@@ -74,12 +90,42 @@ def last(messages, role):
     return None
 
 
+def regex_facts(student: str, rubric_id: str):
+    """Return (sound, complete) for the student's 'r = ...' expression, or None if it can't be read."""
+    if rubric_id not in REGEX_LANGUAGES:
+        return None
+    m = re.search(r"\br\s*=\s*([^\n]+)", student)
+    if not m:
+        return None
+    expr = m.group(1).strip().rstrip(".")
+    if not re.fullmatch(r"[01abε()+*\s]+", expr):
+        return None  # prose, "...", or symbols we don't translate
+    pattern = expr.replace(" ", "").replace("ε", "").replace("+", "|")
+    try:
+        compiled = re.compile("(?:" + pattern + ")\\Z")
+    except re.error:
+        return None
+    alphabet, in_lang = REGEX_LANGUAGES[rubric_id]
+    words = ("".join(t) for n in range(REGEX_MAX_LEN + 1) for t in itertools.product(alphabet, repeat=n))
+    sound = complete = True
+    for w in words:
+        hit = compiled.match(w) is not None
+        if hit and not in_lang(w):
+            sound = False
+        if not hit and in_lang(w):
+            complete = False
+    return sound, complete
+
+
 def check_grading(prompt: str, answer: str, known_blocks: dict, allow_unknown: bool):
     """Return (reasons, info) for one grading row."""
     reasons, info = [], {}
     head, _, student = prompt.partition("Student Answer:")
     if len(student.split()) < 2:
         reasons.append("no_student_answer")
+    elif "Rubric (Total" in student or "Grade the student answer" in student:
+        reasons.append("answer_is_prompt")
+    info["student"] = R.norm(student)
 
     block_start = re.search(r"^\s*Rubric\b", head, re.M)
     block = head[block_start.start():] if block_start else ""
@@ -145,6 +191,13 @@ def check_grading(prompt: str, answer: str, known_blocks: dict, allow_unknown: b
         parts = [float(x) for x in re.findall(r"\d+(?:\.\d+)?", tm.group(1))]
         if abs(sum(parts) - float(tm.group(2))) > EPS or abs(float(tm.group(2)) - got) > EPS:
             reasons.append("total_line")
+
+    facts = regex_facts(student, info.get("rubric_id") or "")
+    if facts is not None:
+        levels = {cid: level.lower() for cid, level, *_ in found}
+        sound, complete = facts
+        if (levels.get("C1") == "full") != sound or (levels.get("C2") == "full") != complete:
+            reasons.append("regex_grade_wrong")
     return sorted(set(reasons)), info
 
 
@@ -184,6 +237,7 @@ def main() -> int:
     kept_n = Counter()
     dropped_n = Counter()
     reason_n = defaultdict(Counter)
+    seen_answers = set()
     folders = defaultdict(lambda: {"rows": 0, "kept": 0, "known": 0, "full": 0, "questions": set(),
                                    "kept_questions": set(), "judge": Counter(), "reasons": Counter()})
 
@@ -205,6 +259,11 @@ def main() -> int:
                         reasons, info = check_grading(user["content"] if user else "",
                                                       asst["content"] if asst else "", known,
                                                       args.allow_unknown_rubric)
+                        key = (info.get("rubric_id") or info.get("question"), info.get("student"))
+                        if not reasons and key in seen_answers:
+                            reasons.append("duplicate_answer")
+                        if not reasons:
+                            seen_answers.add(key)
                         f = folders[folder]
                         f["rows"] += 1
                         f["known"] += info.get("rubric_id") is not None
