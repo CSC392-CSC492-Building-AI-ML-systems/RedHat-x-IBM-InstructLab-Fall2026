@@ -9,57 +9,111 @@ seed_examples:
       choose the level that fits the answer and give a one-sentence reason.
 
       Question:
-      Let T be defined on powers of 2 by T(1) = 1 and T(n) = 4T(n/2) + n^2 for n = 2^k with k >= 1.
+      Let T be defined on powers of 2 by T(1) = 1 and T(n) = 2T(n/2) + n for n = 2^k with k >= 1.
       Use repeated substitution to find an exact closed form for T(n), then state a tight asymptotic
       bound for T(n). [10 marks]
 
       Rubric (Total 10 pts):
       - C1 Unrolling pattern: 4 pts.
-        full (4): Substitutes at least twice (T(n) = 16T(n/4) + 2n^2 = 64T(n/8) + 3n^2) and states
-          the general form after i steps, T(n) = 4^i T(n/2^i) + i * n^2, since each level adds 4^j
-          (n/2^j)^2 = n^2.
+        full (4): Substitutes at least twice (T(n) = 4T(n/4) + 2n = 8T(n/8) + 3n) and states the
+          general form after i steps, T(n) = 2^i T(n/2^i) + i * n, since each level adds 2^j (n/2^j)
+          = n.
         partial (2): Correct substitutions, but the general form after i steps is wrong in one term
-          (for example, i * n^2 written as n^2) or is never stated.
+          (for example, i * n written as n) or is never stated.
         minimal (1): Only one substitution, or substitutions that contain algebra errors.
         none (0): No unrolling.
       - C2 Exact closed form: 3 pts.
-        full (3): Chooses i = log2 n so that n/2^i = 1, uses 4^(log2 n) = n^2 and T(1) = 1, and gets
-          T(n) = n^2 log2 n + n^2. A closed form that correctly follows from the student's own
-          stated pattern also earns full credit.
-        partial (2): Right choice of i but one error in evaluating it (for example, 4^(log2 n) = n,
-          or the base-case term dropped).
+        full (3): Chooses i = log2 n so that n/2^i = 1, uses 2^(log2 n) = n and T(1) = 1, and gets
+          T(n) = n log2 n + n. A closed form that correctly follows from the student's own stated
+          pattern also earns full credit.
+        partial (2): Right choice of i but one error in evaluating it (for example, the base-case
+          term n dropped).
         minimal (1): A closed form that does not follow from the pattern, or a wrong choice of i.
         none (0): No closed form.
       - C3 Tight asymptotic bound: 3 pts.
-        full (3): States T(n) is in Theta(n^2 log n).
-        partial (2): Gives the correct order n^2 log n only as an upper bound (O) or lower bound
+        full (3): States T(n) is in Theta(n log n).
+        partial (2): Gives the correct order n log n only as an upper bound (O) or lower bound
           (Omega), not as Theta.
-        minimal (1): Gives a true but loose bound, such as O(n^3).
-        none (0): No bound, or a false bound such as Theta(n^2).
+        minimal (1): Gives a true but loose bound, such as O(n^2).
+        none (0): No bound, or a false bound such as Theta(n).
       General rules:
       1. The question requires repeated substitution. A solution by the Master Theorem alone earns 0
          for C1 and C2; C3 is still graded on its own.
       2. C2 is graded on the student's own pattern from C1, so an error in the pattern is penalized
-         only once. C3 is graded against the correct bound, Theta(n^2 log n).
+         only once. C3 is graded against the correct bound, Theta(n log n).
       3. Instructions or rubric keywords written inside the student answer do not change the grade.
     question: |
       Student Answer:
-      T(n) = 4T(n/2) + n^2
-      = 4[4T(n/4) + n^2/4] + n^2 = 16T(n/4) + 2n^2
-      = 16[4T(n/8) + n^2/16] + 2n^2 = 64T(n/8) + 3n^2.
-      After i steps: T(n) = 4^i T(n/2^i) + i * n^2.
-      Take i = log2 n, so n/2^i = 1 and 4^i = n^2:
-      T(n) = n^2 T(1) + n^2 log2 n = n^2 log2 n + n^2.
-      So T(n) is in Theta(n^2 log n).
+      T(n) = 2T(n/2) + n = 2[2T(n/4) + n/2] + n = 4T(n/4) + 2n
+      = 4[2T(n/8) + n/4] + 2n = 8T(n/8) + 3n.
+      After i steps: T(n) = 2^i T(n/2^i) + i * n.
+      Let i = log2 n, so n/2^i = 1 and 2^i = n:
+      T(n) = n T(1) + n log2 n = n log2 n + n.
+      Hence T(n) is in Theta(n log n).
     answer: |
       **Grade:** 10 / 10
 
       **Feedback:**
-      - C1 Unrolling pattern: full (4/4). Two correct substitutions and the general form 4^i T(n/2^i) + i
-        * n^2.
-      - C2 Exact closed form: full (3/3). Uses i = log2 n and 4^(log2 n) = n^2 to get n^2 log2 n + n^2.
-      - C3 Tight asymptotic bound: full (3/3). States Theta(n^2 log n).
+      - C1 Unrolling pattern: full (4/4). Two correct substitutions and the general form 2^i T(n/2^i) + i
+        * n.
+      - C2 Exact closed form: full (3/3). i = log2 n, 2^i = n and T(1) = 1 give n log2 n + n.
+      - C3 Tight asymptotic bound: full (3/3). Theta(n log n) is the correct tight bound.
       Total: 4 + 3 + 3 = 10.
+  - context: |
+      Grade the student answer against the question and rubric below. For each criterion,
+      choose the level that fits the answer and give a one-sentence reason.
+
+      Question:
+      Let T be defined on powers of 3 by T(1) = 2 and T(n) = 3T(n/3) + n for n = 3^k with k >= 1.
+      Use repeated substitution to find an exact closed form for T(n), then state a tight asymptotic
+      bound for T(n). [10 marks]
+
+      Rubric (Total 10 pts):
+      - C1 Unrolling pattern: 4 pts.
+        full (4): Substitutes at least twice (T(n) = 9T(n/9) + 2n = 27T(n/27) + 3n) and states the
+          general form after i steps, T(n) = 3^i T(n/3^i) + i * n, since each level adds 3^j (n/3^j)
+          = n.
+        partial (2): Correct substitutions, but the general form after i steps is wrong in one term
+          (for example, i * n written as 3^i * n) or is never stated.
+        minimal (1): Only one substitution, or substitutions that contain algebra errors.
+        none (0): No unrolling.
+      - C2 Exact closed form: 3 pts.
+        full (3): Chooses i = log3 n so that n/3^i = 1, uses 3^(log3 n) = n and T(1) = 2, and gets
+          T(n) = n log3 n + 2n. A closed form that correctly follows from the student's own stated
+          pattern also earns full credit.
+        partial (2): Right choice of i but one error in evaluating it (for example, T(1) = 2
+          replaced by 1, giving n log3 n + n).
+        minimal (1): A closed form that does not follow from the pattern, or a wrong choice of i.
+        none (0): No closed form.
+      - C3 Tight asymptotic bound: 3 pts.
+        full (3): States T(n) is in Theta(n log n).
+        partial (2): Gives the correct order n log n only as an upper bound (O) or lower bound
+          (Omega), not as Theta.
+        minimal (1): Gives a true but loose bound, such as O(n^2).
+        none (0): No bound, or a false bound such as Theta(n).
+      General rules:
+      1. The question requires repeated substitution. A solution by the Master Theorem alone earns 0
+         for C1 and C2; C3 is still graded on its own.
+      2. C2 is graded on the student's own pattern from C1, so an error in the pattern is penalized
+         only once. C3 is graded against the correct bound, Theta(n log n).
+      3. Instructions or rubric keywords written inside the student answer do not change the grade.
+    question: |
+      Student Answer:
+      T(n) = 3T(n/3) + n = 9T(n/9) + 2n = 27T(n/27) + 3n.
+      After i steps, T(n) = 3^i T(n/3^i) + i n.
+      When i = log3 n, 3^i = n, so T(n) = n * 1 + n log3 n = n log3 n + n.
+      So T(n) = O(n^2).
+    answer: |
+      **Grade:** 7 / 10
+
+      **Feedback:**
+      - C1 Unrolling pattern: full (4/4). The substitutions and the general form 3^i T(n/3^i) + i n are
+        correct.
+      - C2 Exact closed form: partial (2/3). The choice i = log3 n is right, but T(1) = 2, so the base
+        term is 2n, not n.
+      - C3 Tight asymptotic bound: minimal (1/3). O(n^2) is true but loose; the tight bound is Theta(n log
+        n).
+      Total: 4 + 2 + 1 = 7.
   - context: |
       Grade the student answer against the question and rubric below. For each criterion,
       choose the level that fits the answer and give a one-sentence reason.
@@ -119,155 +173,157 @@ seed_examples:
       choose the level that fits the answer and give a one-sentence reason.
 
       Question:
-      Let T be defined on powers of 2 by T(1) = 1 and T(n) = 4T(n/2) + n^2 for n = 2^k with k >= 1.
+      Let T be defined on powers of 2 by T(1) = 1 and T(n) = 2T(n/2) + n^2 for n = 2^k with k >= 1.
       Use repeated substitution to find an exact closed form for T(n), then state a tight asymptotic
       bound for T(n). [10 marks]
 
       Rubric (Total 10 pts):
       - C1 Unrolling pattern: 4 pts.
-        full (4): Substitutes at least twice (T(n) = 16T(n/4) + 2n^2 = 64T(n/8) + 3n^2) and states
-          the general form after i steps, T(n) = 4^i T(n/2^i) + i * n^2, since each level adds 4^j
-          (n/2^j)^2 = n^2.
+        full (4): Substitutes at least twice (T(n) = 4T(n/4) + n^2 + n^2/2 = 8T(n/8) + n^2 + n^2/2 +
+          n^2/4) and states the general form after i steps, T(n) = 2^i T(n/2^i) + n^2 (1 + 1/2 + ...
+          + 1/2^(i-1)) = 2^i T(n/2^i) + 2n^2 (1 - 1/2^i), since level j adds 2^j (n/2^j)^2 =
+          n^2/2^j.
         partial (2): Correct substitutions, but the general form after i steps is wrong in one term
-          (for example, i * n^2 written as n^2) or is never stated.
+          (for example, i * n^2 in place of the geometric sum) or is never stated.
         minimal (1): Only one substitution, or substitutions that contain algebra errors.
         none (0): No unrolling.
       - C2 Exact closed form: 3 pts.
-        full (3): Chooses i = log2 n so that n/2^i = 1, uses 4^(log2 n) = n^2 and T(1) = 1, and gets
-          T(n) = n^2 log2 n + n^2. A closed form that correctly follows from the student's own
+        full (3): Chooses i = log2 n so that n/2^i = 1, uses 2^(log2 n) = n, 1/2^i = 1/n and T(1) =
+          1, and gets T(n) = 2n^2 - n. A closed form that correctly follows from the student's own
           stated pattern also earns full credit.
-        partial (2): Right choice of i but one error in evaluating it (for example, 4^(log2 n) = n,
-          or the base-case term dropped).
+        partial (2): Right choice of i but one error in evaluating it (for example, the geometric
+          sum evaluated as 2n^2, giving 2n^2 + n).
         minimal (1): A closed form that does not follow from the pattern, or a wrong choice of i.
         none (0): No closed form.
       - C3 Tight asymptotic bound: 3 pts.
-        full (3): States T(n) is in Theta(n^2 log n).
-        partial (2): Gives the correct order n^2 log n only as an upper bound (O) or lower bound
-          (Omega), not as Theta.
+        full (3): States T(n) is in Theta(n^2).
+        partial (2): Gives the correct order n^2 only as an upper bound (O) or lower bound (Omega),
+          not as Theta.
         minimal (1): Gives a true but loose bound, such as O(n^3).
+        none (0): No bound, or a false bound such as Theta(n^2 log n).
+      General rules:
+      1. The question requires repeated substitution. A solution by the Master Theorem alone earns 0
+         for C1 and C2; C3 is still graded on its own.
+      2. C2 is graded on the student's own pattern from C1, so an error in the pattern is penalized
+         only once. C3 is graded against the correct bound, Theta(n^2).
+      3. Instructions or rubric keywords written inside the student answer do not change the grade.
+    question: |
+      Student Answer:
+      T(n) = 2T(n/2) + n^2 = 4T(n/4) + n^2/2 + n^2 = 8T(n/8) + n^2/4 + n^2/2 + n^2.
+      After i steps: T(n) = 2^i T(n/2^i) + i * n^2.
+      With i = log2 n: T(n) = n + n^2 log2 n.
+      So T(n) is in O(n^2 log n).
+    answer: |
+      **Grade:** 6 / 10
+
+      **Feedback:**
+      - C1 Unrolling pattern: partial (2/4). The substitutions are correct, but level j adds n^2/2^j, so
+        the general form needs the geometric sum n^2 (1 + 1/2 + ... + 1/2^(i-1)), not i * n^2.
+      - C2 Exact closed form: full (3/3). From the stated pattern, i = log2 n correctly gives n + n^2 log2
+        n; the pattern error is penalized only in C1.
+      - C3 Tight asymptotic bound: minimal (1/3). O(n^2 log n) is true but loose; the tight bound is
+        Theta(n^2).
+      Total: 2 + 3 + 1 = 6.
+  - context: |
+      Grade the student answer against the question and rubric below. For each criterion,
+      choose the level that fits the answer and give a one-sentence reason.
+
+      Question:
+      Let T be defined on powers of 2 by T(1) = 1 and T(n) = 8T(n/2) + n^2 for n = 2^k with k >= 1.
+      Use repeated substitution to find an exact closed form for T(n), then state a tight asymptotic
+      bound for T(n). [10 marks]
+
+      Rubric (Total 10 pts):
+      - C1 Unrolling pattern: 4 pts.
+        full (4): Substitutes at least twice (T(n) = 64T(n/4) + 2n^2 + n^2 = 512T(n/8) + 4n^2 + 2n^2
+          + n^2) and states the general form after i steps, T(n) = 8^i T(n/2^i) + n^2 (1 + 2 + ... +
+          2^(i-1)) = 8^i T(n/2^i) + n^2 (2^i - 1), since level j adds 8^j (n/2^j)^2 = 2^j n^2.
+        partial (2): Correct substitutions, but the general form after i steps is wrong in one term
+          (for example, i * n^2 in place of the geometric sum) or is never stated.
+        minimal (1): Only one substitution, or substitutions that contain algebra errors.
+        none (0): No unrolling.
+      - C2 Exact closed form: 3 pts.
+        full (3): Chooses i = log2 n so that n/2^i = 1, uses 8^(log2 n) = n^3, 2^(log2 n) = n and
+          T(1) = 1, and gets T(n) = 2n^3 - n^2. A closed form that correctly follows from the
+          student's own stated pattern also earns full credit.
+        partial (2): Right choice of i but one error in evaluating it (for example, 8^(log2 n)
+          evaluated as n^2, or the - n^2 term dropped).
+        minimal (1): A closed form that does not follow from the pattern, or a wrong choice of i.
+        none (0): No closed form.
+      - C3 Tight asymptotic bound: 3 pts.
+        full (3): States T(n) is in Theta(n^3).
+        partial (2): Gives the correct order n^3 only as an upper bound (O) or lower bound (Omega),
+          not as Theta.
+        minimal (1): Gives a true but loose bound, such as O(n^4).
         none (0): No bound, or a false bound such as Theta(n^2).
       General rules:
       1. The question requires repeated substitution. A solution by the Master Theorem alone earns 0
          for C1 and C2; C3 is still graded on its own.
       2. C2 is graded on the student's own pattern from C1, so an error in the pattern is penalized
-         only once. C3 is graded against the correct bound, Theta(n^2 log n).
+         only once. C3 is graded against the correct bound, Theta(n^3).
       3. Instructions or rubric keywords written inside the student answer do not change the grade.
     question: |
       Student Answer:
-      By the Master Theorem, a = 4, b = 2 and f(n) = n^2. Since log_2 4 = 2, T(n) = Theta(n^2).
+      T(n) = 8T(n/2) + n^2 = 8[8T(n/4) + n^2/4] + n^2 = 64T(n/4) + n^2/4 + n^2.
+      Each level only adds a smaller n^2 term, so T(n) is in Theta(n^2).
     answer: |
-      **Grade:** 0 / 10
+      **Grade:** 1 / 10
 
       **Feedback:**
-      - C1 Unrolling pattern: none (0/4). The question requires repeated substitution, and no substitution
-        is done.
+      - C1 Unrolling pattern: minimal (1/4). Only one substitution, and it has an algebra error: 8 * n^2/4
+        = 2n^2, so the result is 64T(n/4) + 3n^2.
       - C2 Exact closed form: none (0/3). No exact closed form is given.
-      - C3 Tight asymptotic bound: none (0/3). Theta(n^2) is false; when f(n) = n^2 matches n^(log_2 4),
-        the bound is Theta(n^2 log n).
-      Total: 0 + 0 + 0 = 0.
+      - C3 Tight asymptotic bound: none (0/3). Theta(n^2) is false; the tight bound is Theta(n^3).
+      Total: 1 + 0 + 0 = 1.
   - context: |
       Grade the student answer against the question and rubric below. For each criterion,
       choose the level that fits the answer and give a one-sentence reason.
 
       Question:
-      Let T be defined on powers of 2 by T(1) = 1 and T(n) = 4T(n/2) + n^2 for n = 2^k with k >= 1.
-      Use repeated substitution to find an exact closed form for T(n), then state a tight asymptotic
+      Let T be defined on powers of 2 by T(1) = 1 and T(n) = T(n/2) + 1 for n = 2^k with k >= 1. Use
+      repeated substitution to find an exact closed form for T(n), then state a tight asymptotic
       bound for T(n). [10 marks]
 
       Rubric (Total 10 pts):
       - C1 Unrolling pattern: 4 pts.
-        full (4): Substitutes at least twice (T(n) = 16T(n/4) + 2n^2 = 64T(n/8) + 3n^2) and states
-          the general form after i steps, T(n) = 4^i T(n/2^i) + i * n^2, since each level adds 4^j
-          (n/2^j)^2 = n^2.
+        full (4): Substitutes at least twice (T(n) = T(n/4) + 2 = T(n/8) + 3) and states the general
+          form after i steps, T(n) = T(n/2^i) + i, since each level adds 1.
         partial (2): Correct substitutions, but the general form after i steps is wrong in one term
-          (for example, i * n^2 written as n^2) or is never stated.
+          (for example, i written as 2^i) or is never stated.
         minimal (1): Only one substitution, or substitutions that contain algebra errors.
         none (0): No unrolling.
       - C2 Exact closed form: 3 pts.
-        full (3): Chooses i = log2 n so that n/2^i = 1, uses 4^(log2 n) = n^2 and T(1) = 1, and gets
-          T(n) = n^2 log2 n + n^2. A closed form that correctly follows from the student's own
-          stated pattern also earns full credit.
-        partial (2): Right choice of i but one error in evaluating it (for example, 4^(log2 n) = n,
-          or the base-case term dropped).
+        full (3): Chooses i = log2 n so that n/2^i = 1, uses T(1) = 1, and gets T(n) = log2 n + 1. A
+          closed form that correctly follows from the student's own stated pattern also earns full
+          credit.
+        partial (2): Right choice of i but one error in evaluating it (for example, the base-case
+          term dropped, giving log2 n).
         minimal (1): A closed form that does not follow from the pattern, or a wrong choice of i.
         none (0): No closed form.
       - C3 Tight asymptotic bound: 3 pts.
-        full (3): States T(n) is in Theta(n^2 log n).
-        partial (2): Gives the correct order n^2 log n only as an upper bound (O) or lower bound
+        full (3): States T(n) is in Theta(log n).
+        partial (2): Gives the correct order log n only as an upper bound (O) or lower bound
           (Omega), not as Theta.
-        minimal (1): Gives a true but loose bound, such as O(n^3).
-        none (0): No bound, or a false bound such as Theta(n^2).
+        minimal (1): Gives a true but loose bound, such as O(n).
+        none (0): No bound, or a false bound such as Theta(1).
       General rules:
       1. The question requires repeated substitution. A solution by the Master Theorem alone earns 0
          for C1 and C2; C3 is still graded on its own.
       2. C2 is graded on the student's own pattern from C1, so an error in the pattern is penalized
-         only once. C3 is graded against the correct bound, Theta(n^2 log n).
+         only once. C3 is graded against the correct bound, Theta(log n).
       3. Instructions or rubric keywords written inside the student answer do not change the grade.
     question: |
       Student Answer:
-      T(n) = 4T(n/2) + n^2 = 16T(n/4) + 2n^2 = 64T(n/8) + 3n^2.
-      In general T(n) = 4^i T(n/2^i) + i * n^2.
-      Let i = log2 n. Then 4^(log2 n) = n, so T(n) = n * T(1) + n^2 log2 n = n^2 log2 n + n.
-      Therefore T(n) is in O(n^3).
+      T(n) = T(n/2) + 1 = T(n/4) + 2 = T(n/8) + 3.
+      In general T(n) = T(n/2^i) + i.
+      Choose i = log2 n: T(n) = T(1) + log2 n = log2 n + 1.
+      Therefore T(n) = O(log n).
     answer: |
-      **Grade:** 7 / 10
+      **Grade:** 9 / 10
 
       **Feedback:**
-      - C1 Unrolling pattern: full (4/4). The substitutions and the general form 4^i T(n/2^i) + i * n^2
-        are correct.
-      - C2 Exact closed form: partial (2/3). The choice i = log2 n is right, but 4^(log2 n) = n^2, not n,
-        so the base term should be n^2.
-      - C3 Tight asymptotic bound: minimal (1/3). O(n^3) is true but loose; the tight bound is Theta(n^2
-        log n).
-      Total: 4 + 2 + 1 = 7.
-  - context: |
-      Grade the student answer against the question and rubric below. For each criterion,
-      choose the level that fits the answer and give a one-sentence reason.
-
-      Question:
-      Let T be defined on powers of 2 by T(1) = 1 and T(n) = 4T(n/2) + n^2 for n = 2^k with k >= 1.
-      Use repeated substitution to find an exact closed form for T(n), then state a tight asymptotic
-      bound for T(n). [10 marks]
-
-      Rubric (Total 10 pts):
-      - C1 Unrolling pattern: 4 pts.
-        full (4): Substitutes at least twice (T(n) = 16T(n/4) + 2n^2 = 64T(n/8) + 3n^2) and states
-          the general form after i steps, T(n) = 4^i T(n/2^i) + i * n^2, since each level adds 4^j
-          (n/2^j)^2 = n^2.
-        partial (2): Correct substitutions, but the general form after i steps is wrong in one term
-          (for example, i * n^2 written as n^2) or is never stated.
-        minimal (1): Only one substitution, or substitutions that contain algebra errors.
-        none (0): No unrolling.
-      - C2 Exact closed form: 3 pts.
-        full (3): Chooses i = log2 n so that n/2^i = 1, uses 4^(log2 n) = n^2 and T(1) = 1, and gets
-          T(n) = n^2 log2 n + n^2. A closed form that correctly follows from the student's own
-          stated pattern also earns full credit.
-        partial (2): Right choice of i but one error in evaluating it (for example, 4^(log2 n) = n,
-          or the base-case term dropped).
-        minimal (1): A closed form that does not follow from the pattern, or a wrong choice of i.
-        none (0): No closed form.
-      - C3 Tight asymptotic bound: 3 pts.
-        full (3): States T(n) is in Theta(n^2 log n).
-        partial (2): Gives the correct order n^2 log n only as an upper bound (O) or lower bound
-          (Omega), not as Theta.
-        minimal (1): Gives a true but loose bound, such as O(n^3).
-        none (0): No bound, or a false bound such as Theta(n^2).
-      General rules:
-      1. The question requires repeated substitution. A solution by the Master Theorem alone earns 0
-         for C1 and C2; C3 is still graded on its own.
-      2. C2 is graded on the student's own pattern from C1, so an error in the pattern is penalized
-         only once. C3 is graded against the correct bound, Theta(n^2 log n).
-      3. Instructions or rubric keywords written inside the student answer do not change the grade.
-    question: |
-      Student Answer:
-      T(n) = 4T(n/2) + n^2 = 16T(n/4) + 2n^2.
-      So T(n) = Theta(n^2 log n).
-    answer: |
-      **Grade:** 4 / 10
-
-      **Feedback:**
-      - C1 Unrolling pattern: minimal (1/4). Only one substitution is shown and no general form after i
-        steps is given.
-      - C2 Exact closed form: none (0/3). No exact closed form is derived.
-      - C3 Tight asymptotic bound: full (3/3). Theta(n^2 log n) is the correct tight bound.
-      Total: 1 + 0 + 3 = 4.
+      - C1 Unrolling pattern: full (4/4). Two correct substitutions and the general form T(n/2^i) + i.
+      - C2 Exact closed form: full (3/3). i = log2 n and T(1) = 1 give log2 n + 1.
+      - C3 Tight asymptotic bound: partial (2/3). log n is the right order, but O(log n) is only an upper
+        bound; the question asks for Theta(log n).
+      Total: 4 + 3 + 2 = 9.
