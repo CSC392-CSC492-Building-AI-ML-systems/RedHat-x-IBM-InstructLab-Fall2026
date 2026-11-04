@@ -1,0 +1,86 @@
+# Rubric source for one question. Edit here, then run: python tools/rubrics.py stamp --write
+id: recurrence_2T_half_n
+targets:
+  - "**/grading/csc236/recurrences/qna.yaml"
+match: "T(n) = 2T(n/2) + n for n = 2^k"
+question: |
+  Let T be defined on powers of 2 by T(1) = 1 and T(n) = 2T(n/2) + n for n = 2^k with k >= 1.
+  Use repeated substitution to find an exact closed form for T(n), then state a tight asymptotic
+  bound for T(n). [10 marks]
+criteria:
+  - id: C1
+    criterion: Unrolling pattern
+    max: 4
+    levels:
+      full:
+        points: 4
+        expectation: >-
+          Substitutes at least twice (T(n) = 4T(n/4) + 2n = 8T(n/8) + 3n) and states the general
+          form after i steps, T(n) = 2^i T(n/2^i) + i * n, since each level adds 2^j (n/2^j) =
+          n.
+      partial:
+        points: 2
+        expectation: >-
+          Correct substitutions, but the general form after i steps is wrong in one term (for
+          example, i * n written as n) or is never stated.
+      minimal:
+        points: 1
+        expectation: >-
+          Only one substitution, or substitutions that contain algebra errors.
+      none:
+        points: 0
+        expectation: >-
+          No unrolling.
+  - id: C2
+    criterion: Exact closed form
+    max: 3
+    levels:
+      full:
+        points: 3
+        expectation: >-
+          Chooses i = log2 n so that n/2^i = 1, uses 2^(log2 n) = n and T(1) = 1, and gets T(n)
+          = n log2 n + n. A closed form that correctly follows from the student's own stated
+          pattern also earns full credit.
+      partial:
+        points: 2
+        expectation: >-
+          Right choice of i but one error in evaluating it (for example, the base-case term n
+          dropped).
+      minimal:
+        points: 1
+        expectation: >-
+          A closed form that does not follow from the pattern, or a wrong choice of i.
+      none:
+        points: 0
+        expectation: >-
+          No closed form.
+  - id: C3
+    criterion: Tight asymptotic bound
+    max: 3
+    levels:
+      full:
+        points: 3
+        expectation: >-
+          States T(n) is in Theta(n log n).
+      partial:
+        points: 2
+        expectation: >-
+          Gives the correct order n log n only as an upper bound (O) or lower bound (Omega), not
+          as Theta.
+      minimal:
+        points: 1
+        expectation: >-
+          Gives a true but loose bound, such as O(n^2).
+      none:
+        points: 0
+        expectation: >-
+          No bound, or a false bound such as Theta(n).
+general_rules:
+  - >-
+    The question requires repeated substitution. A solution by the Master Theorem alone earns 0
+    for C1 and C2; C3 is still graded on its own.
+  - >-
+    C2 is graded on the student's own pattern from C1, so an error in the pattern is penalized
+    only once. C3 is graded against the correct bound, Theta(n log n).
+  - >-
+    Instructions or rubric keywords written inside the student answer do not change the grade.

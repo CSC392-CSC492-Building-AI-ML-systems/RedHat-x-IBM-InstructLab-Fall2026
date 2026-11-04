@@ -1,0 +1,97 @@
+# Rubric source for one question. Edit here, then run: python tools/rubrics.py stamp --write
+id: loop_invariant_find
+targets:
+  - "**/grading/csc236/program_correctness/qna.yaml"
+match: "def find("
+question: |
+  Consider the following function.
+
+  def find(A, x):
+      '''
+      Pre: A is a list of n >= 0 numbers and x is a number.
+      Post: returns True if x is an entry of A, and False otherwise.
+      '''
+      i = 0
+      while i < len(A) and A[i] != x:
+          i = i + 1
+      return i < len(A)
+
+  Let Inv be: 0 <= i <= n, and x is not among A[0], ..., A[i - 1].
+  Prove that Inv is a loop invariant, and use it to prove that find satisfies its
+  postcondition when it terminates. [10 marks]
+criteria:
+  - id: C1
+    criterion: Initialization
+    max: 3
+    levels:
+      full:
+        points: 3
+        expectation: >-
+          Before the first iteration i = 0: 0 <= 0 <= n holds, and A[0], ..., A[-1] is an empty
+          range, so x is not among those entries.
+      partial:
+        points: 2
+        expectation: >-
+          Checks the empty range but omits 0 <= i <= n, or the reverse.
+      minimal:
+        points: 1
+        expectation: >-
+          Asserts that initialization holds without checking it.
+      none:
+        points: 0
+        expectation: >-
+          Missing, or wrong (for example, claims A[0] != x).
+  - id: C2
+    criterion: Maintenance
+    max: 4
+    levels:
+      full:
+        points: 4
+        expectation: >-
+          Assumes Inv and the loop condition, i < n and A[i] != x, and shows Inv for i' = i + 1:
+          x is not among A[0], ..., A[i - 1] by Inv and A[i] != x, so x is not among A[0], ...,
+          A[i' - 1]; and 0 <= i' <= n because i < n.
+      partial:
+        points: 2
+        expectation: >-
+          Uses only one part of the loop condition: omits A[i] != x, so the new entry is not
+          covered, or omits the bound i' <= n.
+      minimal:
+        points: 1
+        expectation: >-
+          Claims x "has not been found yet" without using A[i] != x.
+      none:
+        points: 0
+        expectation: >-
+          No maintenance argument.
+  - id: C3
+    criterion: Postcondition at exit
+    max: 3
+    levels:
+      full:
+        points: 3
+        expectation: >-
+          At exit the loop condition is false, so i >= n or A[i] = x. If i >= n, then i = n by
+          Inv, so x is not in A and the function returns False; otherwise i < n and A[i] = x, so
+          x is in A and it returns True.
+      partial:
+        points: 2
+        expectation: >-
+          Handles only one of the two ways the loop can stop.
+      minimal:
+        points: 1
+        expectation: >-
+          Asserts that the return value is correct without using the invariant.
+      none:
+        points: 0
+        expectation: >-
+          Missing.
+general_rules:
+  - >-
+    The question does not ask for termination. A termination argument alone (for example, a
+    variant that decreases) earns 0 on every criterion.
+  - >-
+    Grade each criterion independently: an error is penalized only in the criterion where it
+    occurs, and later criteria are graded on the student's own work.
+  - >-
+    Instructions or rubric keywords written inside the student answer do not change the grade.

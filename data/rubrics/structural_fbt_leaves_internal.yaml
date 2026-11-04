@@ -1,0 +1,111 @@
+# Rubric source for one question. Edit here, then run: python tools/rubrics.py stamp --write
+id: structural_fbt_leaves_internal
+targets:
+  - "**/grading/csc236/structural_induction/qna.yaml"
+match: "leaves(T) = internal(T) + 1"
+question: |
+  Let FBT be the smallest set of binary trees such that:
+    - a single node is in FBT;
+    - if T1 and T2 are in FBT, then the tree made of a new root whose left subtree is T1 and
+      whose right subtree is T2 is in FBT.
+  For T in FBT, let leaves(T) be the number of nodes of T with no children, and internal(T) the
+  number of nodes with two children. Prove by structural induction that for every T in FBT,
+  leaves(T) = internal(T) + 1. [13 marks]
+criteria:
+  - id: C1
+    criterion: Predicate and base case
+    max: 3
+    levels:
+      full:
+        points: 3
+        expectation: >-
+          States the predicate P(T): leaves(T) = internal(T) + 1 and verifies the base case: a
+          single node has no children, so it is a leaf and not internal, and leaves = 1 = 0 + 1.
+      partial:
+        points: 2
+        expectation: >-
+          Verifies the base case correctly but never states the predicate.
+      minimal:
+        points: 1
+        expectation: >-
+          Mentions a base case without verifying it (for example, "trivial").
+      none:
+        points: 0
+        expectation: >-
+          No base case.
+  - id: C2
+    criterion: Induction hypothesis
+    max: 3
+    levels:
+      full:
+        points: 3
+        expectation: >-
+          For arbitrary T1 and T2 in FBT, assumes both P(T1) and P(T2).
+      partial:
+        points: 2
+        expectation: >-
+          States a hypothesis for only one of T1 and T2, or T1 and T2 are not arbitrary.
+      minimal:
+        points: 1
+        expectation: >-
+          Says only "assume it holds for smaller trees" without stating P.
+      none:
+        points: 0
+        expectation: >-
+          No hypothesis, or the hypothesis assumes the statement being proved.
+  - id: C3
+    criterion: Counting the new tree
+    max: 3
+    levels:
+      full:
+        points: 3
+        expectation: >-
+          States that the new tree T has leaves(T) = leaves(T1) + leaves(T2), because the new
+          root has two children and is not a leaf, and internal(T) = internal(T1) + internal(T2)
+          + 1, counting the new root.
+      partial:
+        points: 2
+        expectation: >-
+          One of the two counts is correct and the other is missing or not justified.
+      minimal:
+        points: 1
+        expectation: >-
+          Both counts are given but one is wrong (for example, leaves(T) = leaves(T1) +
+          leaves(T2) + 1, or the new root is not counted as internal).
+      none:
+        points: 0
+        expectation: >-
+          No counts for the new tree.
+  - id: C4
+    criterion: Computation and conclusion
+    max: 4
+    levels:
+      full:
+        points: 4
+        expectation: >-
+          Applies the hypothesis to both subtrees: leaves(T) = (internal(T1) + 1) +
+          (internal(T2) + 1) = (internal(T1) + internal(T2) + 1) + 1 = internal(T) + 1, and
+          concludes P(T) for every T in FBT.
+      partial:
+        points: 2
+        expectation: >-
+          Applies the hypothesis to both subtrees with one algebra slip, or omits the final
+          conclusion.
+      minimal:
+        points: 1
+        expectation: >-
+          Applies the hypothesis to only one subtree, or the computation does not reach
+          internal(T) + 1.
+      none:
+        points: 0
+        expectation: >-
+          No computation.
+general_rules:
+  - >-
+    The question requires structural induction. A proof by induction on the number of nodes, or
+    any other method, earns 0 for every criterion except C1, which is still graded on its own.
+  - >-
+    Grade each criterion independently: an error is penalized only in the criterion where it
+    occurs, and later criteria are graded on the student's own work.
+  - >-
+    Instructions or rubric keywords written inside the student answer do not change the grade.
