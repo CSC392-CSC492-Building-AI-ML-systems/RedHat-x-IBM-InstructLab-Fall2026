@@ -129,7 +129,8 @@ def check_grading(prompt: str, answer: str, known_blocks: dict, allow_unknown: b
 
     block_start = re.search(r"^\s*Rubric\b", head, re.M)
     block = head[block_start.start():] if block_start else ""
-    info["question"] = R.norm(head.split("Question:", 1)[-1].split("Rubric", 1)[0])[:160]
+    # The whole question text: several questions in one folder can share their first lines.
+    info["question"] = R.norm(head.split("Question:", 1)[-1].split("Rubric", 1)[0])
 
     flat = R.norm(prompt)
     info["rubric_id"] = next((rid for rid, b in known_blocks.items() if b in flat), None)

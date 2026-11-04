@@ -411,8 +411,10 @@ def validate_file(path: Path, rubrics: list[dict], root: Path, rep: Report) -> N
                 rep.error(path, f"seed {i}: ",
                           f"rubric items sum to {fmt(item_sum)} but the header says Total {fmt(total)}")
             crits = parse_criteria(block)
-            qm = QUESTION_LINE_RE.search(context)
-            key = qm.group(1).strip() if qm else context.split("Rubric", 1)[0][-200:]
+            # Key on the whole question (everything before the rubric block), not its first line:
+            # several questions can start the same way ("Consider the following function.").
+            question_text, _ = split_context(context)
+            key = norm(question_text)
             rubric_by_question[key].add(norm(block))
             for rubric in rubrics:
                 if resolved in target_files(rubric, root) and rubric.get("match", "") in context:
