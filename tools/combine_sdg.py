@@ -12,6 +12,9 @@ Optional cleanup (applied to the skills file only):
   --clean-grades          For grading examples (an answer with "Grade: x / y"):
                             - drop examples with no readable grade, or whose "out of" differs
                               from the rubric's "Total N pts";
+                            - drop grades that contradict themselves: a level whose points differ
+                              from the rubric's points for that level, a criterion graded twice,
+                              or a headline grade that isn't the sum of the criterion scores;
                             - when the same prompt appears several times, keep ONE example if
                               at least 2/3 of its copies agree on the grade (the majority grade),
                               otherwise drop all copies (the teacher couldn't grade it consistently).
@@ -42,6 +45,45 @@ import re
 
 RUN_DIR = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{6}$")
 GRADE = re.compile(r"Grade:?\**\s*([\d.]+)\s*/\s*([\d.]+)")
+CRIT_HEAD = re.compile(r"^\s*-\s*C(\d+)\b")
+CRIT_LEVEL = re.compile(r"^\s+(full|partial|minimal|none)\s*\((\d+(?:\.\d+)?)\)")
+GRADED = re.compile(
+    r"C(\d+)[^:\n]*:\s*\**\s*(full|partial|minimal|none)\s*\((\d+(?:\.\d+)?)\s*/\s*[\d.]+\)"
+)
+
+
+def rubric_points(user):
+    """{criterion: {level: points}} parsed from the rubric in the prompt, or {} if not found."""
+    out, cur = {}, None
+    for line in user.split("Student Answer:", 1)[0].splitlines():
+        m = CRIT_HEAD.match(line)
+        if m:
+            cur = m.group(1)
+            continue
+        m = CRIT_LEVEL.match(line)
+        if m and cur:
+            out.setdefault(cur, {})[m.group(1)] = float(m.group(2))
+    return out
+
+
+def grade_self_consistent(user, ans, headline):
+    """None if fine, otherwise the reason the grade contradicts itself or the rubric."""
+    graded = GRADED.findall(ans)
+    if not graded:
+        return None
+    points = rubric_points(user)
+    if points:
+        ids = [c for c, _, _ in graded]
+        if len(ids) != len(set(ids)):
+            return "grading_criteria_repeated"
+        for c, level, score in graded:
+            if c in points and level in points[c] and points[c][level] != float(score):
+                return "grading_level_score_mismatch"
+    if abs(sum(float(sc) for _, _, sc in graded) - headline) > 1e-9:
+        return "grading_total_not_sum"
+    return None
+
+
 TOTAL = re.compile(r"Total\s+([\d.]+)\s*pts?")
 
 
@@ -111,6 +153,12 @@ def clean(records, a, stats):
                 continue
             if t and float(t.group(1)) != float(g.group(2)):
                 stats["grading_total_mismatch"] += 1
+                continue
+            bad = grade_self_consistent(
+                turn(r, "user"), turn(r, "assistant"), float(g.group(1))
+            )
+            if bad:
+                stats[bad] += 1
                 continue
             by_prompt[turn(r, "user")].append((float(g.group(1)), r))
         for prompt, items in by_prompt.items():
