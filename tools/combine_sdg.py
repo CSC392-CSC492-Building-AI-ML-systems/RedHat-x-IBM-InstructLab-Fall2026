@@ -27,8 +27,11 @@ RUN_DIR = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{6}$")
 
 
 def newest_run(topic_dir):
-    runs = sorted(d for d in os.listdir(topic_dir)
-                  if RUN_DIR.match(d) and os.path.isdir(os.path.join(topic_dir, d)))
+    runs = sorted(
+        d
+        for d in os.listdir(topic_dir)
+        if RUN_DIR.match(d) and os.path.isdir(os.path.join(topic_dir, d))
+    )
     return os.path.join(topic_dir, runs[-1]) if runs else None
 
 
@@ -39,7 +42,7 @@ def fix_context(record):
             continue
         text = m["content"]
         first = text.split("\n", 1)[0].strip()
-        if len(first) < 20:            # too short to be a reliable marker
+        if len(first) < 20:  # too short to be a reliable marker
             continue
         second = text.find(first, len(first))
         if second > 0:
@@ -58,8 +61,13 @@ def main():
     a = ap.parse_args()
 
     os.makedirs(a.out, exist_ok=True)
-    manifest = {"root": os.path.abspath(a.root), "seed": a.seed,
-                "fix_repeated_context": a.fix_repeated_context, "sources": {}, "totals": {}}
+    manifest = {
+        "root": os.path.abspath(a.root),
+        "seed": a.seed,
+        "fix_repeated_context": a.fix_repeated_context,
+        "sources": {},
+        "totals": {},
+    }
     combined = {"knowledge_train_msgs": [], "skills_train_msgs": []}
     fixed = 0
 
@@ -84,7 +92,9 @@ def main():
                             fixed += 1
                         combined[kind].append(json.dumps(rec, ensure_ascii=False))
                         n += 1
-                manifest["sources"].setdefault(topic, {})[os.path.relpath(f, a.root)] = n
+                manifest["sources"].setdefault(topic, {})[
+                    os.path.relpath(f, a.root)
+                ] = n
                 print(f"{topic:28s} {kind:22s} {n:7d}  ({os.path.relpath(f, a.root)})")
 
     rng = random.Random(a.seed)
@@ -103,7 +113,7 @@ def main():
 
 
 if __name__ == "__main__":
- """Combine per-topic ilab data generation outputs into one pair of training files.
+    """Combine per-topic ilab data generation outputs into one pair of training files.
 
 For each topic folder under ROOT (e.g. data/generated/qwen3-30b-instruct-2507/induction),
 uses the NEWEST run folder (named like 2026-10-26_123649) and joins:
@@ -149,13 +159,18 @@ TOTAL = re.compile(r"Total\s+([\d.]+)\s*pts?")
 
 
 def newest_run(topic_dir):
-    runs = sorted(d for d in os.listdir(topic_dir)
-                  if RUN_DIR.match(d) and os.path.isdir(os.path.join(topic_dir, d)))
+    runs = sorted(
+        d
+        for d in os.listdir(topic_dir)
+        if RUN_DIR.match(d) and os.path.isdir(os.path.join(topic_dir, d))
+    )
     return os.path.join(topic_dir, runs[-1]) if runs else None
 
 
 def turn(rec, role):
-    return next((m["content"] for m in rec.get("messages", []) if m.get("role") == role), "")
+    return next(
+        (m["content"] for m in rec.get("messages", []) if m.get("role") == role), ""
+    )
 
 
 def fix_context(record):
@@ -165,7 +180,7 @@ def fix_context(record):
             continue
         text = m["content"]
         first = text.split("\n", 1)[0].strip()
-        if len(first) < 20:            # too short to be a reliable marker
+        if len(first) < 20:  # too short to be a reliable marker
             continue
         second = text.find(first, len(first))
         if second > 0:
@@ -176,7 +191,11 @@ def fix_context(record):
 
 def is_grading(rec):
     user, ans = turn(rec, "user"), turn(rec, "assistant")
-    return bool(GRADE.search(ans)) or "Grade the student" in user or bool(TOTAL.search(user))
+    return (
+        bool(GRADE.search(ans))
+        or "Grade the student" in user
+        or bool(TOTAL.search(user))
+    )
 
 
 def clean(records, a, stats):
@@ -244,19 +263,31 @@ def main():
     ap.add_argument("--clean-grades", action="store_true")
     ap.add_argument("--dedupe", action="store_true")
     ap.add_argument("--drop-prefix", nargs="*", default=[])
-    ap.add_argument("--full-skills", action="store_true",
-                    help="for skill runs, use every generated example instead of ilab's 30-per-skill sample")
+    ap.add_argument(
+        "--full-skills",
+        action="store_true",
+        help="for skill runs, use every generated example instead of ilab's 30-per-skill sample",
+    )
     ap.add_argument("--skip", nargs="*", default=[], help="topic folders to leave out")
     ap.add_argument("--seed", type=int, default=42)
     a = ap.parse_args()
 
     os.makedirs(a.out, exist_ok=True)
-    manifest = {"root": os.path.abspath(a.root), "seed": a.seed,
-                "options": {"fix_repeated_context": a.fix_repeated_context,
-                            "clean_grades": a.clean_grades, "dedupe": a.dedupe,
-                            "drop_prefix": a.drop_prefix, "skip": a.skip,
-                            "full_skills": a.full_skills},
-                "sources": {}, "totals": {}, "removed": {}}
+    manifest = {
+        "root": os.path.abspath(a.root),
+        "seed": a.seed,
+        "options": {
+            "fix_repeated_context": a.fix_repeated_context,
+            "clean_grades": a.clean_grades,
+            "dedupe": a.dedupe,
+            "drop_prefix": a.drop_prefix,
+            "skip": a.skip,
+            "full_skills": a.full_skills,
+        },
+        "sources": {},
+        "totals": {},
+        "removed": {},
+    }
     combined = {"knowledge_train_msgs": [], "skills_train_msgs": []}
     fixed = 0
 
@@ -273,7 +304,13 @@ def main():
             if kind == "skills_train_msgs" and a.full_skills:
                 # ilab samples each skill down to 30 examples (NUM_SYNTH_SKILLS) when mixing;
                 # the full generated set for each skill is in node_datasets_*/.
-                full = sorted(glob.glob(os.path.join(run, "node_datasets_*", "compositional_skills_*.jsonl")))
+                full = sorted(
+                    glob.glob(
+                        os.path.join(
+                            run, "node_datasets_*", "compositional_skills_*.jsonl"
+                        )
+                    )
+                )
                 if full:
                     files = full
             for f in files:
@@ -287,7 +324,9 @@ def main():
                             fixed += 1
                         combined[kind].append(rec)
                         n += 1
-                manifest["sources"].setdefault(topic, {})[os.path.relpath(f, a.root)] = n
+                manifest["sources"].setdefault(topic, {})[
+                    os.path.relpath(f, a.root)
+                ] = n
                 print(f"{topic:28s} {kind:22s} {n:7d}  ({os.path.relpath(f, a.root)})")
 
     rng = random.Random(a.seed)
@@ -315,4 +354,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()   main()
+    main()
