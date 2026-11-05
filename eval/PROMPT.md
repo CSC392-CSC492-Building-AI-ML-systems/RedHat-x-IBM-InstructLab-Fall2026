@@ -2,7 +2,7 @@
 
 Template `eval-prompt-v3`, built by [`prompt.py`](prompt.py). The base model and the fine-tuned model get exactly the same messages for every test case.
 
-> **Status:** the student-answer layout is **provisional** (`LAYOUT_VERIFIED = False`). It has not yet been checked against real training data on Fir; see [Open points](#open-points). The Group B labels it is scored against are also provisional: draft v3, not human-verified, not frozen.
+> **Status:** the student-answer layout is **provisional** (`LAYOUT_VERIFIED = False`). It has not yet been checked against real training data on Fir; see [Open points](#open-points). The Group B labels it is scored against are also provisional: draft v3, AI-drafted and human-reviewed, but not independently TA-verified or frozen.
 
 ## What the model sees
 
@@ -105,6 +105,10 @@ Text that is also in the visible fields or the rules is allowed, because it reve
 - **Layout check (before any real run):** compare `ANSWER_LAYOUT` with one real `skills_train_msgs` line on Fir. If it differs, change `ANSWER_LAYOUT`, its test and table row 3 above, and give the template a new version. Then set `LAYOUT_VERIFIED = True`. Either change alters `template_hash`.
 ## Change log
 
+- **2026-11-05: Group B dataset updated.** The dataset is now identified by SHA-256 `ecd69def58cf75b87032ef96419767e008e7481150170839411b47e8f1011cbc`. The file name and `version` field did not change, and no score or level changed. The template is still `eval-prompt-v3`, with the same `template_hash`.
+  - **Q08 C2 rubric clarification.** In all three `csc236_B_struct_08` cases, `minimal` now covers an attempted concrete length calculation that is incorrect or doesn't use the induction hypothesis to justify the required form. `none` now covers giving no concrete calculation or relation for either recursive constructor. Rubric text is part of the prompt, so the prompts for these three cases changed, and runs made before this change can't be compared with later runs.
+  - **Q08 C1 justification correction.** In `csc236_B_struct_08_ans02` and `csc236_B_struct_08_ans02_kw1`, the justification no longer says the property is mentioned only in the final conclusion, because the answer also mentions it in the inductive step. The actual issue is that the property isn't stated during proof setup. Justifications never reach the prompt.
+  - **Human review.** All 60 cases now have `review_status` set to `human_reviewed`, and `provenance` records which cases began in the pilot. The labels are AI-drafted and human-reviewed, but remain provisional: they are not independently TA-verified or frozen, and the dataset's `status` still says it is not team-approved. The review metadata does not reach the prompt.
 - **2026-11-02: `eval-prompt-v3`.** Moved the Grade line after the criterion lines and the `Total:` line, and added the rule that the Grade must equal the sum of all criterion points. Runs made with different template versions can't be compared with each other.
 - **2026-11-02: `eval-prompt-v2`.** Added the output-format block. Runs made with v1 and v2 can't be compared with each other.
 - **2026-10-30: `grading_policies[1]` shortened in the dataset.**
@@ -115,5 +119,5 @@ Text that is also in the visible fields or the rules is allowed, because it reve
     - nfa_16, C1 and C3: "(correct subset construction of N)";
     - dfa_15, C3: "assessed separately under C2".
   - The prompt still uses all four policies exactly as stored in the dataset.
-  - The file name and `version` field did not change. The dataset is now identified by SHA-256 `48a38706…a31c`; the original v3 hash was `ca2ef30d…c423`.
+  - The file name and `version` field did not change. This changed the dataset's SHA-256 from the original v3 hash `ca2ef30d…c423` to `48a38706…a31c`.
   - The tests check that no prompt contains a question's short name. The three rubric phrases above were confirmed when the policy was shortened; the tests no longer check them.

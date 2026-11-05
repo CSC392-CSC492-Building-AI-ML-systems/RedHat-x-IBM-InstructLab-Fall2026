@@ -260,6 +260,7 @@ class SummaryTest(Base):
         s = self.summarize()
         json.dumps(s)
         self.assertTrue(s["labels"]["provisional"])
+        self.assertIn("human-reviewed; provisional and not independently TA-verified or frozen", s["labels"]["note"])
         self.assertIn("confidence_flagging", s["not_yet_implemented"])  # documented, not dropped
         self.assertEqual(s["labels"]["dataset_sha256"], self.ds.sha256)
         self.assertEqual(s["selection"]["selected_count"], N_CASES)

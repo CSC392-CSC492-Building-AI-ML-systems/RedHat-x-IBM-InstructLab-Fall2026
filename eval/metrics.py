@@ -20,7 +20,8 @@ criterion in the case is valid. A relation pair or paraphrase group needs every 
 member to be valid; otherwise it counts as not passed, and the number of such pairs is reported.
 
 Results are reported as {"value", "n", "of"}: value = n / of, or None when there is nothing to
-count. The labels are drafts (Group B v3, not human-verified), so every number is provisional.
+count. The labels (Group B v3) are AI-drafted and human-reviewed, but not independently TA-verified
+or frozen, so every number is provisional.
 
 Only numpy is needed.
 """
@@ -407,7 +408,8 @@ def summarize(ds: dataset.Dataset, selection: dataset.Selection, parsed: dict[st
     result["selection"] = selection.describe()
     result["labels"] = {"source": "draft_ground_truth", "dataset_version": ds.version,
                         "dataset_sha256": ds.sha256, "provisional": True,
-                        "note": "Draft labels, not human-verified and not frozen. Not reportable answer-key results."}
+                        "note": "AI-drafted labels, human-reviewed; provisional and not independently TA-verified "
+                                "or frozen. Not reportable answer-key results."}
     result["settings"] = {"n_boot": n_boot, "seed": seed, "cluster": "question_id"}
     result["not_yet_implemented"] = NOT_YET_IMPLEMENTED
     result["definitions"] = DEFINITIONS

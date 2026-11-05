@@ -34,7 +34,8 @@ Re-score a finished run with the current parser and metrics, without a model:
 
 This writes a new rescore_<timestamp>/ folder inside the run and leaves the raw outputs alone.
 
-Every result is provisional: the Group B labels are drafts, not human-verified.
+Every result is provisional: the Group B labels are AI-drafted and human-reviewed, but not
+independently TA-verified or frozen.
 """
 
 from __future__ import annotations
@@ -60,8 +61,8 @@ RAW = "raw_outputs.jsonl"
 PARSED = "parsed.jsonl"
 METRICS = "metrics.json"
 SUMMARY = "summary.md"
-PROVISIONAL_NOTE = ("Scored against Group B draft labels, which are not human-verified and not frozen. "
-                    "Provisional; not answer-key results.")
+PROVISIONAL_NOTE = ("Scored against Group B AI-drafted labels, human-reviewed; provisional and not independently "
+                    "TA-verified or frozen. Not answer-key results.")
 
 
 class RunError(Exception):

@@ -228,5 +228,5 @@ python -u eval/compare.py --base "$BASE_RUN" --fine-tuned "$FT_RUN" --out "$RUN_
     "${COMPARE_ARGS[@]}"
 
 echo "Done at $(date). Results are in $RUN_ROOT"
-echo "All results are provisional: the Group B labels are not human-verified yet."
+echo "All results are provisional: the Group B labels are AI-drafted and human-reviewed, but not independently TA-verified or frozen."
 echo "Scratch is purged of old files: copy anything worth keeping to the team folder."

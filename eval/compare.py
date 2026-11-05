@@ -19,7 +19,7 @@ coverage and parsing failures for both models, criterion-level changes, and per-
 per-test-type agreement. Every metric of both models is in compare.json under "metrics".
 
 Writes <out>/<timestamp>_compare/compare.json and compare.md. Every result is provisional: the
-Group B labels are drafts, not human-verified.
+Group B labels are AI-drafted and human-reviewed, but not independently TA-verified or frozen.
 """
 
 from __future__ import annotations

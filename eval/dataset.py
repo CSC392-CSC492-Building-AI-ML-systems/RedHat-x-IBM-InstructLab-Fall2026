@@ -24,11 +24,12 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 DEFAULT_DATASET = REPO / "test_set" / "groupB_60_draft.json"
-# Group B draft v3 (version "draft-v3-2026-10-29"), after grading_policies[1] was cut back to its
-# general principle on 2026-10-30: the question-specific examples and exceptions were removed, and
-# the rubrics already state them. Test cases, rubrics and labels are as in the original v3 file,
-# whose hash was ca2ef30d576f5e44f1ed321540f48dcad6e0b49d39d091d09af7396df939c423.
-EXPECTED_SHA256 = "48a387064d0072d985666ffc7110b97060a4ec9dda8a612a8c1cd038a807a31c"
+# Group B draft v3 (version "draft-v3-2026-10-29"), human-reviewed. It differs from the original v3
+# file, whose hash was ca2ef30d576f5e44f1ed321540f48dcad6e0b49d39d091d09af7396df939c423: on 2026-10-30
+# grading_policies[1] was cut back to its general principle (the rubrics already state the removed
+# parts), and in 2026-11 Q08's C2 minimal and none levels and the C1 justification of ans02 and
+# ans02_kw1 were reworded and the review metadata was updated. No score or level changed.
+EXPECTED_SHA256 = "ecd69def58cf75b87032ef96419767e008e7481150170839411b47e8f1011cbc"
 
 LEVELS = ("full", "partial", "minimal", "none")
 TEST_TYPES = ("original", "paraphrase", "fairness", "sensitivity", "robustness")

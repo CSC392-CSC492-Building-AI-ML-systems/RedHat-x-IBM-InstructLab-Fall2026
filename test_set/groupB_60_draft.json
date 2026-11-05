@@ -1,7 +1,7 @@
 {
   "dataset_name": "GradeAI M5 Test Part 2 — Group B draft (60 cases)",
   "version": "draft-v3-2026-10-29",
-  "status": "DRAFT — not finalized, not frozen, not team-approved",
+  "status": "DRAFT — human review complete; not finalized, not frozen, not team-approved",
   "group_definition": "Group B: new questions with new rubrics and new student answers (CSC398 Proposal, 'Building the Test Set').",
   "grader_visible_fields": [
     "question",
@@ -27,12 +27,12 @@
     "provenance"
   ],
   "field_notes": {
-    "ta_score / ta_criteria": "Proposal-style fields holding PROVISIONAL draft values copied from draft_ground_truth. They are NOT verified TA grades. Replace them with human-verified grades during review.",
+    "ta_score / ta_criteria": "Proposal-style fields holding the reviewed values copied from draft_ground_truth. They are not TA grades.",
     "draft_ground_truth": "Detailed per-criterion draft labels (level, score, one-sentence justification), total_score and max_score. ta_score and ta_criteria must always equal these values.",
     "expected_flags": "Placeholder from the proposal example. Its semantics (which confidence or injection flags are expected) are not yet defined (M7), so it is [] for every case.",
     "expected_relation_to_parent": "For variants: identical_to_parent (paraphrase, fairness, robustness) or lower_than_parent with per-criterion changes (sensitivity). null for originals.",
     "rubric.levels": "Every criterion defines full/partial/minimal/none with fixed points: max-3 criteria use 3/2/1/0 and max-4 criteria use 4/2/1/0 (pilot convention).",
-    "review_status": "pilot_team_reviewed_pending_final_approval (the 10 pilot cases, with the team's review decisions applied) or pending_human_review (the 50 new cases)."
+    "review_status": "human_reviewed: the human review of this case is complete. Every case has this status, whether or not it began in the pilot; provenance records which cases did."
   },
   "grading_policies": [
     "Award credit for valid mathematical progress toward the requested proof, not for terminology, unrelated correct calculations, or unsupported conclusions.",
@@ -187,8 +187,8 @@
         "max_score": 13
       },
       "expected_relation_to_parent": null,
-      "review_status": "pilot_team_reviewed_pending_final_approval",
-      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; ta_score/ta_criteria are provisional draft values, not verified TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "pilot_unchanged"
     },
     {
@@ -338,8 +338,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pilot_team_reviewed_pending_final_approval",
-      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; ta_score/ta_criteria are provisional draft values, not verified TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "pilot_unchanged"
     },
     {
@@ -486,8 +486,8 @@
         "max_score": 13
       },
       "expected_relation_to_parent": null,
-      "review_status": "pilot_team_reviewed_pending_final_approval",
-      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; ta_score/ta_criteria are provisional draft values, not verified TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "pilot_revised_question_and_rubric_scores_unchanged"
     },
     {
@@ -637,8 +637,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pilot_team_reviewed_pending_final_approval",
-      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; ta_score/ta_criteria are provisional draft values, not verified TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "pilot_revised_question_and_rubric_scores_unchanged"
     },
     {
@@ -785,8 +785,8 @@
         "max_score": 14
       },
       "expected_relation_to_parent": null,
-      "review_status": "pilot_team_reviewed_pending_final_approval",
-      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; ta_score/ta_criteria are provisional draft values, not verified TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "pilot_unchanged"
     },
     {
@@ -936,8 +936,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pilot_team_reviewed_pending_final_approval",
-      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; ta_score/ta_criteria are provisional draft values, not verified TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "pilot_unchanged"
     },
     {
@@ -1084,8 +1084,8 @@
         "max_score": 13
       },
       "expected_relation_to_parent": null,
-      "review_status": "pilot_team_reviewed_pending_final_approval",
-      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; ta_score/ta_criteria are provisional draft values, not verified TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "pilot_revised_rubric_scores_unchanged"
     },
     {
@@ -1238,8 +1238,8 @@
         },
         "total_change": -3
       },
-      "review_status": "pilot_team_reviewed_pending_final_approval",
-      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; ta_score/ta_criteria are provisional draft values, not verified TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "pilot_revised_rubric_scores_unchanged"
     },
     {
@@ -1356,8 +1356,8 @@
         "max_score": 11
       },
       "expected_relation_to_parent": null,
-      "review_status": "pilot_team_reviewed_pending_final_approval",
-      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; ta_score/ta_criteria are provisional draft values, not verified TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "pilot_revised_rubric_and_labels"
     },
     {
@@ -1477,8 +1477,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pilot_team_reviewed_pending_final_approval",
-      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; ta_score/ta_criteria are provisional draft values, not verified TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "Pilot draft label (Claude, 2026-10-27) with the team's 2026-10-28 review decisions applied; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "pilot_revised_rubric_and_labels"
     },
     {
@@ -1595,8 +1595,8 @@
         "max_score": 10
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -1716,8 +1716,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -1837,8 +1837,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -1958,8 +1958,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -2079,8 +2079,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -2200,8 +2200,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -2324,8 +2324,8 @@
         },
         "total_change": -3
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -2442,8 +2442,8 @@
         "max_score": 10
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -2560,8 +2560,8 @@
         "max_score": 11
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -2681,8 +2681,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -2802,8 +2802,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -2923,8 +2923,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -3044,8 +3044,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -3165,8 +3165,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -3286,8 +3286,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -3404,8 +3404,8 @@
         "max_score": 11
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -3457,11 +3457,11 @@
             },
             "minimal": {
               "points": 1,
-              "expectation": "A length relation is stated incorrectly (e.g., a wrong count of added symbols), or no induction hypothesis is used."
+              "expectation": "Attempts a concrete length calculation for at least one recursive constructor, but the calculation is incorrect or the induction hypothesis is not used to justify the required form."
             },
             "none": {
               "points": 0,
-              "expectation": "Recursive constructors not addressed with any length relation."
+              "expectation": "No concrete length calculation or relation is provided for either recursive constructor; preservation is merely asserted or the constructors are not addressed."
             }
           }
         },
@@ -3522,8 +3522,8 @@
         "max_score": 10
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -3575,11 +3575,11 @@
             },
             "minimal": {
               "points": 1,
-              "expectation": "A length relation is stated incorrectly (e.g., a wrong count of added symbols), or no induction hypothesis is used."
+              "expectation": "Attempts a concrete length calculation for at least one recursive constructor, but the calculation is incorrect or the induction hypothesis is not used to justify the required form."
             },
             "none": {
               "points": 0,
-              "expectation": "Recursive constructors not addressed with any length relation."
+              "expectation": "No concrete length calculation or relation is provided for either recursive constructor; preservation is merely asserted or the constructors are not addressed."
             }
           }
         },
@@ -3621,7 +3621,7 @@
             "criterion_id": "C1",
             "level": "partial",
             "score": 2,
-            "justification": "Verifies |1| = 1 = 4·0 + 1, but the property |e| ≡ 1 (mod 4) is mentioned only in the final conclusion, not stated during proof setup."
+            "justification": "Correctly verifies the base case, but does not explicitly state the property being proved during the proof setup."
           },
           {
             "criterion_id": "C2",
@@ -3640,8 +3640,8 @@
         "max_score": 10
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -3693,11 +3693,11 @@
             },
             "minimal": {
               "points": 1,
-              "expectation": "A length relation is stated incorrectly (e.g., a wrong count of added symbols), or no induction hypothesis is used."
+              "expectation": "Attempts a concrete length calculation for at least one recursive constructor, but the calculation is incorrect or the induction hypothesis is not used to justify the required form."
             },
             "none": {
               "points": 0,
-              "expectation": "Recursive constructors not addressed with any length relation."
+              "expectation": "No concrete length calculation or relation is provided for either recursive constructor; preservation is merely asserted or the constructors are not addressed."
             }
           }
         },
@@ -3739,7 +3739,7 @@
             "criterion_id": "C1",
             "level": "partial",
             "score": 2,
-            "justification": "Verifies |1| = 1 = 4·0 + 1, but the property |e| ≡ 1 (mod 4) is mentioned only in the final conclusion, not stated during proof setup."
+            "justification": "Correctly verifies the base case, but does not explicitly state the property being proved during the proof setup."
           },
           {
             "criterion_id": "C2",
@@ -3761,8 +3761,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -3879,8 +3879,8 @@
         "max_score": 10
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -4000,8 +4000,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -4118,8 +4118,8 @@
         "max_score": 10
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -4242,8 +4242,8 @@
         },
         "total_change": -2
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -4360,8 +4360,8 @@
         "max_score": 10
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_A"
     },
     {
@@ -4508,8 +4508,8 @@
         "max_score": 13
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_B"
     },
     {
@@ -4626,8 +4626,8 @@
         "max_score": 11
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_B"
     },
     {
@@ -4750,8 +4750,8 @@
         },
         "total_change": -2
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_B"
     },
     {
@@ -4868,8 +4868,8 @@
         "max_score": 11
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_B"
     },
     {
@@ -4989,8 +4989,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_B"
     },
     {
@@ -5107,8 +5107,8 @@
         "max_score": 11
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_B"
     },
     {
@@ -5228,8 +5228,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_B"
     },
     {
@@ -5346,8 +5346,8 @@
         "max_score": 11
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_B"
     },
     {
@@ -5464,8 +5464,8 @@
         "max_score": 10
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_B"
     },
     {
@@ -5582,8 +5582,8 @@
         "max_score": 10
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_B"
     },
     {
@@ -5700,8 +5700,8 @@
         "max_score": 10
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_B"
     },
     {
@@ -5824,8 +5824,8 @@
         },
         "total_change": -2
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_B"
     },
     {
@@ -5942,8 +5942,8 @@
         "max_score": 10
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_B"
     },
     {
@@ -6090,8 +6090,8 @@
         "max_score": 13
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_C"
     },
     {
@@ -6241,8 +6241,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_C"
     },
     {
@@ -6389,8 +6389,8 @@
         "max_score": 13
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_C"
     },
     {
@@ -6507,8 +6507,8 @@
         "max_score": 11
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_C"
     },
     {
@@ -6625,8 +6625,8 @@
         "max_score": 11
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_C"
     },
     {
@@ -6746,8 +6746,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_C"
     },
     {
@@ -6894,8 +6894,8 @@
         "max_score": 13
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_C"
     },
     {
@@ -7042,8 +7042,8 @@
         "max_score": 13
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_C"
     },
     {
@@ -7193,8 +7193,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_C"
     },
     {
@@ -7311,8 +7311,8 @@
         "max_score": 10
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_C"
     },
     {
@@ -7429,8 +7429,8 @@
         "max_score": 10
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_C"
     },
     {
@@ -7547,8 +7547,8 @@
         "max_score": 10
       },
       "expected_relation_to_parent": null,
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_C"
     },
     {
@@ -7668,8 +7668,8 @@
         "relation": "identical_to_parent",
         "note": "per-criterion levels and scores must equal the parent's"
       },
-      "review_status": "pending_human_review",
-      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; NOT human-verified; ta_score/ta_criteria are provisional draft values, not TA grades",
+      "review_status": "human_reviewed",
+      "label_source": "AI-drafted by a frontier model (Claude); new case generated 2026-10-28; human-reviewed; ta_score/ta_criteria hold the reviewed draft values, not TA grades",
       "provenance": "new_batch_C"
     }
   ]

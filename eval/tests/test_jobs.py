@@ -432,6 +432,7 @@ class JobScriptTest(unittest.TestCase):
         self.assertEqual((sent["temperature"], sent["chat_template_kwargs"]), (0.0, {"enable_thinking": False}))
         self.assertFalse(c.vllm_alive(), "vLLM was left running")
         self.assertIn("provisional", r.stdout)
+        self.assertIn("human-reviewed, but not independently TA-verified or frozen", r.stdout)
 
     def test_base_only_without_adapter(self):
         c = self.cluster(adapter=False)

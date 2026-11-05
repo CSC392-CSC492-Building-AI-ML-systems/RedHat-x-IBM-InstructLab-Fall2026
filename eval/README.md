@@ -2,7 +2,7 @@
 
 Runs the test set against the base model and the fine-tuned model with identical prompts and decoding settings, parses each criterion-level grade, scores it against the labels, and compares the two models. Part of milestone 7.
 
-> **All results are provisional.** The Group B labels are drafts (v3): not human-verified and not frozen. Every output file says so.
+> **All results are provisional.** The Group B labels (v3) are AI-drafted and human-reviewed, but not independently TA-verified or frozen. Every output file says so.
 
 ## Use
 

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-PROVISIONAL = ("> **PROVISIONAL LABELS.** Scored against the Group B draft labels (draft v3), which are not "
-               "human-verified and not frozen. These are not answer-key results and must not be reported as such.")
+PROVISIONAL = ("> **PROVISIONAL LABELS.** Scored against the Group B AI-drafted labels (draft v3), human-reviewed; "
+               "provisional and not independently TA-verified or frozen. These are not answer-key results and must "
+               "not be reported as such.")
 LAYOUT_UNVERIFIED = ("> **Prompt layout unverified.** The student-answer layout of the evaluation prompt has not "
                      "yet been checked against real training data on Fir (eval/PROMPT.md).")
 

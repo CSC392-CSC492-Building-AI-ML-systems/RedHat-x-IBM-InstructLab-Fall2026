@@ -167,6 +167,8 @@ class RunEvalTest(MiniDatasetTest):
         self.assertEqual(m["criterion"]["strict_exact_agreement"]["value"], 1.0)
         summary = (run_dir / "summary.md").read_text(encoding="utf-8")
         self.assertIn("PROVISIONAL LABELS", summary)
+        self.assertIn("human-reviewed; provisional and not independently TA-verified or frozen", summary)
+        self.assertIn("human-reviewed; provisional and not independently TA-verified or frozen", config["labels_note"])
         self.assertIn("Prompt layout unverified", summary)
         self.assertIn("All replies were format-compliant.", summary)
 
