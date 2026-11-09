@@ -384,18 +384,16 @@ Base (zero-shot) & \ph{XX.X} & \ph{0.XX} & \ph{XX.X}\\
 % TODO [Name 1 + Name 2]: This section is course-critical (CSC398). Aim for ~1 page; tie to course readings.
 
 \subsection{Student Privacy, Data Sovereignty, and FIPPA}
-
+GradeAI is designed to run on the Fir research cluster so that grading does not require sending student submissions to a commercial LLM API. This limits external disclosure, but submissions and grading records still require access controls and retention rules. The prototype uses synthetic proofs. Any deployment involving real student work would require institutional review of how submissions are accessed, stored, and retained.
 
 \subsection{Linguistic and Non-Native-Speaker Bias}
+A grading model may penalize unfamiliar phrasing, minor grammatical errors, or typos even when the mathematical reasoning is correct. To test for this, we propose comparing rubric-level grades across matched versions of a proof that preserve its mathematical content. We also compare those grades with the reference labels, since a model can assign the same incorrect grade to every version. Synthetic style variants test sensitivity to wording. Their results have limited applicability to real student populations.
 
 \subsection{Over-Reliance and TA Agency}
-\gradeai{} is an assistant, not an arbiter: low-confidence cases require human review and justifications make model reasoning auditable.
-Risks remain, such as automation bias on unflagged submissions.
-\todo{}{Discuss spot-check policy and monitoring for confident-but-wrong cases.}
+If the model gives the same incorrect grade across several runs, the submission may go unflagged. We propose having TAs review flagged submissions and randomly sample unflagged ones to identify errors the rule misses. To check for automation bias, TAs would grade a small subset before seeing the model’s output and then compare the two assessments. TAs retain authority to override the model’s grades.
 
 \subsection{Transparency, Explainability, and Contestability}
-Per-criterion levels and one-sentence justifications let students see why partial credit was awarded and support appeals.
-\todo{}{Discuss whether students should be told AI assisted grading, and the appeal path.}
+Criterion-level grades and short explanations can help students identify where they lost credit and give TAs a specific decision to review. The model may have misunderstood the student's reasoning. Therefore, when a student disputes a grade, the TA should assess the original proof against the rubric. Under the proposed workflow, students would be told when GradeAI assisted with grading and could request a TA regrade of the disputed criterion.
 
 \subsection{Statement on AI Use}
 \todo{}{Disclose how AI tools were used in research and writing (including synthetic test-set generation and any drafting help) per CSC398 academic-integrity requirements.}
