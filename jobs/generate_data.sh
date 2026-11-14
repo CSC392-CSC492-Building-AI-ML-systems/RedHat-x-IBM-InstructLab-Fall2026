@@ -79,7 +79,14 @@ echo "Teacher: $TEACHER ($MODEL_PATH)"
 
 # ---- Checks that need no GPU -------------------------------------------------------
 if [[ "$GEN_ARGS" =~ --pipeline[[:space:]]+([^[:space:]]+) ]]; then
+    PIPELINE_MATCH="${BASH_REMATCH[0]}"
     PIPELINE_DIR="${BASH_REMATCH[1]}"
+    # ilab's generator reads a relative --pipeline path inside its own package folder, so pass an
+    # absolute path (relative paths are taken from the repo folder).
+    if [[ "$PIPELINE_DIR" != /* ]]; then
+        PIPELINE_DIR="$REPO/$PIPELINE_DIR"
+        GEN_ARGS="${GEN_ARGS/"$PIPELINE_MATCH"/--pipeline $PIPELINE_DIR}"
+    fi
     for f in knowledge.yaml freeform_skills.yaml grounded_skills.yaml; do
         if [ ! -f "$PIPELINE_DIR/$f" ]; then
             echo "ERROR: pipeline folder $PIPELINE_DIR is missing $f. Create it first (e.g. tools/make_fixed_rubric_pipeline.py)."
@@ -91,7 +98,8 @@ fi
 # through a launcher that registers the blocks first; anything else runs plain `ilab`.
 ILAB_CMD=(ilab)
 if [ -n "$PIPELINE_DIR" ] && [ -f "$PIPELINE_DIR/CUSTOM_BLOCKS" ]; then
-    for f in tools/ilab_grade_first.py tools/grade_first_blocks.py tools/gen_answers.py tools/extract_seeds.py; do
+    for f in tools/ilab_grade_first.py tools/grade_first_blocks.py tools/grade_first_extras.py \
+        tools/grade_first_formal.py tools/gen_answers.py tools/extract_seeds.py; do
         if [ ! -f "$REPO/$f" ]; then
             echo "ERROR: $PIPELINE_DIR needs $f, which isn't in $REPO."
             exit 1
