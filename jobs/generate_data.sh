@@ -78,6 +78,38 @@ echo "Teacher: $TEACHER ($MODEL_PATH)"
 [ -n "$GEN_ARGS" ] && echo "Extra ilab data generate options: $GEN_ARGS"
 
 # ---- Checks that need no GPU -------------------------------------------------------
+if [[ "$GEN_ARGS" =~ --pipeline[[:space:]]+([^[:space:]]+) ]]; then
+    PIPELINE_MATCH="${BASH_REMATCH[0]}"
+    PIPELINE_DIR="${BASH_REMATCH[1]}"
+    # ilab's generator reads a relative --pipeline path inside its own package folder, so pass an
+    # absolute path (relative paths are taken from the repo folder).
+    if [[ "$PIPELINE_DIR" != /* ]]; then
+        PIPELINE_DIR="$REPO/$PIPELINE_DIR"
+        GEN_ARGS="${GEN_ARGS/"$PIPELINE_MATCH"/--pipeline $PIPELINE_DIR}"
+    fi
+    for f in knowledge.yaml freeform_skills.yaml grounded_skills.yaml; do
+        if [ ! -f "$PIPELINE_DIR/$f" ]; then
+            echo "ERROR: pipeline folder $PIPELINE_DIR is missing $f. Create it first (e.g. tools/make_fixed_rubric_pipeline.py)."
+            exit 1
+        fi
+    done
+fi
+# A pipeline with its own blocks (it has a CUSTOM_BLOCKS file, like pipelines/grade_first) runs
+# through a launcher that registers the blocks first; anything else runs plain `ilab`.
+ILAB_CMD=(ilab)
+if [ -n "$PIPELINE_DIR" ] && [ -f "$PIPELINE_DIR/CUSTOM_BLOCKS" ]; then
+    for f in tools/ilab_grade_first.py tools/grade_first_blocks.py tools/grade_first_extras.py \
+        tools/grade_first_formal.py tools/gen_answers.py tools/extract_seeds.py; do
+        if [ ! -f "$REPO/$f" ]; then
+            echo "ERROR: $PIPELINE_DIR needs $f, which isn't in $REPO."
+            exit 1
+        fi
+    done
+    ILAB_CMD=(python "$REPO/tools/ilab_grade_first.py")
+    export GRADE_FIRST_REVIEW_DIR="$OUT/grade_first_review"
+    echo "Pipeline $PIPELINE_DIR has its own blocks: running ilab through tools/ilab_grade_first.py"
+    echo "Review files for checking the answers: $GRADE_FIRST_REVIEW_DIR"
+fi
 if [ ! -f "$MODEL_PATH/config.json" ]; then
     echo "ERROR: no model found at $MODEL_PATH (see docs/data-generation.md for downloading it)."
     exit 1
@@ -182,7 +214,7 @@ FAMILY_ARGS=()
 [ -n "$MODEL_FAMILY" ] && FAMILY_ARGS=(--model-family "$MODEL_FAMILY")
 
 echo "Generating data, started $(date)"
-ilab data generate \
+"${ILAB_CMD[@]}" data generate \
     --endpoint-url "$ENDPOINT" \
     --model "$MODEL_PATH" \
     "${FAMILY_ARGS[@]}" \
