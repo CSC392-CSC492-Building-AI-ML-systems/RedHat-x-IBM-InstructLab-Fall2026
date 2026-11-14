@@ -38,9 +38,10 @@ off at once, whole-answer mistakes whose grade the rubric's general rules fix (a
 Master Theorem only, a termination argument only, another method, a near-blank answer), and
 more reference styles. With `extras: false` they do exactly what gen_answers.py does.
 
-With `check_levels: true` (the default), every rewritten part is checked by the teacher: the
-answer must no longer earn full on that criterion, and the intended level's description must fit
-it (grade_first_extras.flaw_check_prompt). For regex the teacher grades the off criteria blind,
+With `check_levels: true` (the default), every rewritten part is checked by the teacher
+(grade_first_extras.flaw_check_prompt): a rewrite that still earns full is never kept, and one
+whose level the teacher doubts is tried again; if no try is confirmed, the first rewrite that has
+the mistake is kept and its criterion is listed in the `unconfirmed` column. For regex the teacher grades the off criteria blind,
 given the strings the code found, which decides partial vs minimal. Rejected rewrites and answers
 lost after every try are written to the review files too. The log ends GradeFirstAnswers with how
 many rewrites the check rejected per topic, criterion and level. The reasons are written with
@@ -342,16 +343,14 @@ class GradeFirstAnswers(Block):
         return gx.parse_level(text, crit)
 
     def _flaw_check(self, teacher, s, crit, level, answer, ref_part, new_part, key):
-        """The verdict on a rewritten part: "ok", or why it was rejected (grade_first_extras.flaw_check_prompt)."""
+        """(verdict, fits): verdict is "ok", "still earns full" or "unclear reply: ...", and fits says
+        whether the teacher found the intended level's description to fit (grade_first_extras.flaw_check_prompt)."""
         text = teacher.chat(gx.flaw_check_prompt(s, answer, crit, level, ref_part, new_part), temperature=0.0,
                             max_tokens=20, seed=ga.stable_int(key, crit["id"], "flaw check", self.seed))
         a, b = gx.parse_flaw_check(text)
-        if a == "no" and b == "yes":
-            return "ok"
-        if a is None or b is None:
-            return "unclear reply: " + " ".join(text.split())[:80]
-        return "; ".join(x for x in ("still earns full" if a == "yes" else "",
-                                      f"{level} doesn't fit" if b == "no" else "") if x)
+        if a is None:
+            return "unclear reply: " + " ".join(text.split())[:80], False
+        return ("still earns full" if a == "yes" else "ok"), b == "yes"
 
     def _with_trick(self, r, answer):
         if r["trick"]:
@@ -423,10 +422,12 @@ class GradeFirstAnswers(Block):
                         changes.append({"criterion": crit["id"], "level": lv, "method": "left out", "text": ""})
                         facts.append(f"- {crit['id']} ({crit['name']}): this part is missing from the answer.")
                         continue
-                text, still_right, judged, rejected = None, 0, [], []
+                text, still_right, judged, rejected, unfit, note = None, 0, [], [], None, ""
                 for attempt in range(4 if self.check_levels else 3):
+                    # Retries run a little hotter and say what went wrong, so they don't repeat the same text.
                     new = ga.clean_part(teacher.chat(
-                        ga.rewrite_prompt(s, ref["parts"], crit, lv, mistake), temperature=self.temperature,
+                        ga.rewrite_prompt(s, ref["parts"], crit, lv, mistake) + note,
+                        temperature=min(1.0, self.temperature + 0.15 * attempt),
                         max_tokens=self.max_tokens, seed=ga.stable_int(r["cand_id"], crit["id"], attempt, self.seed)))
                     if not new or new.strip() == ref["parts"][crit["id"]].strip() or "<<" in new:
                         continue
@@ -434,18 +435,28 @@ class GradeFirstAnswers(Block):
                         still_right += 1
                         continue
                     if self.check_levels:  # checked in the answer as it will be
-                        verdict = self._flaw_check(teacher, s, crit, lv, _join({**parts, crit["id"]: new}),
-                                                   ref["parts"][crit["id"]], new, f"{r['cand_id']}_{attempt}")
-                        if verdict != "ok":
+                        verdict, fits = self._flaw_check(teacher, s, crit, lv, _join({**parts, crit["id"]: new}),
+                                                         ref["parts"][crit["id"]], new, f"{r['cand_id']}_{attempt}")
+                        if verdict != "ok":  # the mistake isn't there: never kept
                             judged.append(verdict)
                             rejected.append(new)
+                            note = gx.RETRY_STILL_FULL
+                            continue
+                        if not fits:  # the mistake is there, but the teacher doubts the level: try again,
+                            unfit = unfit or new  # and keep the first such rewrite if no try fits
+                            judged.append(f"{lv} doesn't fit")
+                            rejected.append(new)
+                            note = gx.retry_unfit(crit, lv)
                             continue
                     text = new
                     break
+                unconfirmed = text is None and unfit is not None
+                if unconfirmed:
+                    text = unfit
                 changes.append({"criterion": crit["id"], "level": lv, "method": "rewritten", "text": text,
                                 "mistake": mistake, "still_right": still_right,
                                 "level_checked": self.check_levels, "level_check": judged,
-                                "rejected": rejected})
+                                "rejected": rejected, "unconfirmed": unconfirmed})
                 if text is None:
                     return "", changes, "a rewrite failed", ""
                 parts[crit["id"]] = text
@@ -460,6 +471,7 @@ class GradeFirstAnswers(Block):
                 b = ("", [], f"{type(b).__name__}: {b}", "")
             r["answer"], r["changes_json"], r["failed"] = b[0], json.dumps(b[1], ensure_ascii=False), b[2]
             r["facts"] = b[3]
+            r["unconfirmed"] = " ".join(ch["criterion"] for ch in b[1] if ch.get("unconfirmed"))
         logger.info("grade_first: %d answers built, %d failed", sum(not r["failed"] for r in rows),
                     sum(bool(r["failed"]) for r in rows))
         self._log_level_checks(rows)
@@ -476,12 +488,12 @@ class GradeFirstAnswers(Block):
                     continue
                 key = (r["topic"], ch["criterion"] if ch["criterion"] != "all" else "C1/C2/C3",
                        ch.get("target", ch["level"]))
-                kept, rejected, lost = stats.get(key, (0, 0, 0))
-                stats[key] = (kept + (ch.get("text") is not None), rejected + len(ch.get("level_check", [])),
-                              lost + (ch.get("text") is None))
-        for (topic, cid, lv), (kept, rejected, lost) in sorted(stats.items()):
-            logger.info("grade_first: level check %s %s %s: %d kept, %d rewrites rejected, %d answers lost",
-                        topic, cid, lv, kept, rejected, lost)
+                kept, unconf, rejected, lost = stats.get(key, (0, 0, 0, 0))
+                stats[key] = (kept + (ch.get("text") is not None), unconf + bool(ch.get("unconfirmed")),
+                              rejected + len(ch.get("level_check", [])), lost + (ch.get("text") is None))
+        for (topic, cid, lv), (kept, unconf, rejected, lost) in sorted(stats.items()):
+            logger.info("grade_first: level check %s %s %s: %d kept (%d with the level unconfirmed), "
+                        "%d rewrites rejected, %d answers lost", topic, cid, lv, kept, unconf, rejected, lost)
 
 
 @BlockRegistry.register("GradeFirstLabels")
@@ -548,6 +560,9 @@ class GradeFirstLabels(Block):
             judged = ch.get("level_check") or []
             check = (f" Level check rejected {len(judged)} rewrite(s) ({' | '.join(judged)})."
                      if judged else " Level check agreed." if ch.get("level_checked") else "")
+            if ch.get("unconfirmed"):
+                check += (" No try was confirmed to fit the level, so the first rewrite that has the mistake was "
+                          "kept (column `unconfirmed`).")
             if ch["criterion"] == "all":
                 lines.append(f"- **Whole answer** ({ch['method']}): {ch.get('mistake', '')}{check}")
                 continue
@@ -559,7 +574,8 @@ class GradeFirstLabels(Block):
             lines.append("- All full: copied from the reference unchanged.")
         for ch in changes:
             for k, (said, text) in enumerate(zip(ch.get("level_check") or [], ch.get("rejected") or []), 1):
-                lines += ["", f"Rejected rewrite {k} of {ch['criterion']} ({said}):", "", "```", text, "```"]
+                kept = " - this one was kept, level unconfirmed" if ch.get("unconfirmed") and text == ch["text"] else ""
+                lines += ["", f"Rejected rewrite {k} of {ch['criterion']} ({said}){kept}:", "", "```", text, "```"]
         if label is None:
             lines.append("")
             append_review(self.review, s["seed_id"], lines)
