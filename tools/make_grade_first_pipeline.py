@@ -14,7 +14,8 @@ Run once, in the ilab environment, from the repo folder:
 --per-question "scaled" (the default) uses ilab's --sdg-scale-factor as the number of answers
 per question. By default the blocks also use tools/grade_first_extras.py (more kinds of
 mistakes, whole-answer mistakes and more answer styles); --no-extras gives exactly what
-tools/gen_answers.py makes. The folder also gets a CUSTOM_BLOCKS file, which tells jobs/generate_data.sh to
+tools/gen_answers.py makes. Every rewritten part is graded again by the teacher without being
+told the intended level and kept only if the two agree; --no-level-check turns that off. The folder also gets a CUSTOM_BLOCKS file, which tells jobs/generate_data.sh to
 run ilab through tools/ilab_grade_first.py.
 """
 
@@ -93,7 +94,13 @@ def grounded_pipeline(a):
             {
                 "name": "build_answers",
                 "type": "GradeFirstAnswers",
-                "config": {**common, **extras, "workers": a.workers, "seed": a.seed},
+                "config": {
+                    **common,
+                    **extras,
+                    "workers": a.workers,
+                    "seed": a.seed,
+                    "check_levels": not a.no_level_check,
+                },
             },
             {
                 "name": "write_labels",
@@ -135,6 +142,11 @@ def main():
         "--no-extras",
         action="store_true",
         help="only what gen_answers.py does: no extra mistakes, scenarios or styles",
+    )
+    ap.add_argument(
+        "--no-level-check",
+        action="store_true",
+        help="keep every rewrite without the teacher's blind re-grade of the criterion",
     )
     ap.add_argument(
         "--per-question",
