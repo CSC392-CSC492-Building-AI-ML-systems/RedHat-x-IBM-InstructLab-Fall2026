@@ -31,6 +31,7 @@ import random
 import re
 
 import gen_answers as ga
+import grade_first_extras as gx
 
 FORMAL_TOPICS = ("dfa_nfa", "regex")
 
@@ -602,6 +603,9 @@ def build_regex(teacher, seed: dict, ref: dict, t: dict, cand_id: str, global_se
         text = teacher.chat(regex_rewrite_prompt(seed, ref["text"], t), temperature=0.7, max_tokens=900,
                             seed=ga.stable_int(cand_id, "regex", attempt, global_seed)).strip()
         rx = regex_of(text)
+        if gx.text_problem(text):
+            rejected += 1
+            continue
         if t["C1"] == t["C2"] == "full" and rx != ref_rx:
             rejected += 1
             continue

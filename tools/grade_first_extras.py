@@ -138,9 +138,11 @@ def scenarios_for(seed: dict) -> list[dict]:
                     "check": larger_c,
                     "instruction": "Rewrite the whole answer so that the student picks a constant c that works but is "
                                    "larger than the smallest one (for example, found by bounding each term of f(n) by a "
-                                   "multiple of g(n)), gives a valid n_0 for that constant, proves correctly that their "
-                                   "c and n_0 work, and then argues that their own c - 1 (one less than their constant) "
-                                   "fails, as if it were the smallest."})
+                                   "multiple of g(n)), gives a valid n_0 for that constant and proves correctly that their "
+                                   "c and n_0 work. For c - 1 (one less than their own constant), the student checks two "
+                                   "or three small values of n where c - 1 fails and concludes from them that c - 1 fails "
+                                   "for every n_0. Write it as a confident student who believes their c is the smallest: "
+                                   "do not try larger values of n, do not reconsider, and do not comment on the task."})
     if topic == "recurrences" and _rule(seed, r"Master Theorem alone earns 0 for C1 and C2"):
         out.append({"name": "master_theorem_only", "keep_first": False,
                     "levels": {c: ("full" if c == ids[-1] else "none") for c in ids},
@@ -186,6 +188,24 @@ def scenarios_for(seed: dict) -> list[dict]:
                                    "your own words and add one or two vague sentences, with no real work (no base case, "
                                    "no constants, no proof steps)."})
     return out
+
+
+# Text a teacher writes when it drafts or reasons about its task instead of writing the answer:
+# "Wait, re-check sum", "? No, that adds extra 1s", "The prompt says ...". The first full run had
+# 22 such answers (3.6%); they read like a model thinking aloud, not like a student.
+DRAFTING = re.compile(r"\bwait\b|I made a mistake|\bLet me re(?:check|do|think|consider|read)|"
+                      r"\bLet's re(?:check|do|think|consider|-?evaluate|-?read)|\bHmm\b|\bActually, no\b|"
+                      r"\? No, (?:that|wait|this)\b", re.I)
+META = re.compile(r"Below is an exam question|\bthe prompt\b|\bthe rubric\b|\bpractice answer\b|\bpartial credit\b|"
+                  r"\bfull marks\b|\bI will write\b|\bthe correct student answer\b", re.I)
+
+
+def text_problem(text: str) -> str | None:
+    """Why an answer written by the teacher doesn't read like a student's, or None."""
+    for t in ga.TRICKS:  # injected on purpose later; they mention marks and the rubric
+        text = text.replace(t, "")
+    m = META.search(text) or DRAFTING.search(text)
+    return f'contains "{m.group(0)}"' if m else None
 
 
 def scenario_prompt(seed: dict, ref_parts: dict, sc: dict) -> str:

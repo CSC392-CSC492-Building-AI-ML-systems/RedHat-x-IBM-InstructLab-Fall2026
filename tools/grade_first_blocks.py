@@ -251,6 +251,8 @@ class GradeFirstReferences(Block):
                                        max_tokens=self.max_tokens,
                                        seed=ga.stable_int(s["seed_id"], k, attempt, self.seed)).strip()
                     check = fm.check_reference(s, raw)
+                    if check["result"] == "right" and gx.text_problem(raw):
+                        check = {"result": "wrong", "note": f"{check['note']}; {gx.text_problem(raw)}"}
                     if check["result"] == "right" or attempt == 2:
                         return {"ref_id": f"{s['seed_id']}_r{k + 1}", "seed_id": s["seed_id"], "style": style,
                                 "text": raw, "parts": {"answer": raw}, "attempts": attempt + 1,
@@ -264,6 +266,11 @@ class GradeFirstReferences(Block):
                     ref = {"ref_id": f"{s['seed_id']}_r{k + 1}", "seed_id": s["seed_id"], "style": style,
                            "parts": parts, "attempts": attempt + 1}
                     ref["code_check"] = ga.check_reference(s, ref)
+                    problem = gx.text_problem(raw)
+                    if problem and attempt < 2:
+                        continue  # drafting text in the answer: write it again
+                    if problem:
+                        ref["code_check"] = {"result": "wrong", "note": problem}
                     return ref
             return None
 
@@ -369,7 +376,7 @@ class GradeFirstAnswers(Block):
                 seed=ga.stable_int(r["cand_id"], "scenario", attempt, self.seed)))
             if not text or "<<" in text:
                 continue
-            if not sc["check"](text):
+            if not sc["check"](text) or gx.text_problem(text):
                 rejected += 1
                 continue
             answer = f"{ref['parts'][first].strip()}\n\n{text}" if sc["keep_first"] else text
@@ -429,7 +436,7 @@ class GradeFirstAnswers(Block):
                         ga.rewrite_prompt(s, ref["parts"], crit, lv, mistake) + note,
                         temperature=min(1.0, self.temperature + 0.15 * attempt),
                         max_tokens=self.max_tokens, seed=ga.stable_int(r["cand_id"], crit["id"], attempt, self.seed)))
-                    if not new or new.strip() == ref["parts"][crit["id"]].strip() or "<<" in new:
+                    if not new or new.strip() == ref["parts"][crit["id"]].strip() or "<<" in new or gx.text_problem(new):
                         continue
                     if ga.rewrite_still_right(s, crit["id"], new):
                         still_right += 1
