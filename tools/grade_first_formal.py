@@ -361,7 +361,7 @@ def dfa_facts(levels: dict, notes: list[str]) -> str:
     if levels.get("mapping"):
         lines.append("- The answer's states correspond to the DFA in the rubric as "
                      + ", ".join(f"{k} = {v}" for k, v in levels["mapping"].items()) + ".")
-    lines += [f"- {n[0].upper()}{n[1:]}." for n in notes]
+    lines += [f"- {n}." for n in notes]  # not capitalized: a note can start with a state name like p
     if not notes:
         lines.append("- The DFA is correct: the start state, every transition and the accepting states match the "
                      "DFA in the rubric.")
