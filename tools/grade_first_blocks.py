@@ -203,8 +203,13 @@ def pmap(fn, items, workers):
 
 
 def review_dir(ctx, configured):
+    """Where the review files go: the block's `review` setting, else GRADE_FIRST_REVIEW_DIR (set by
+    jobs/generate_data.sh to OUT/grade_first_review), else next to ilab's checkpoints (which ilab
+    leaves out with --batch-size 0), else the current folder."""
     if configured:
         return configured
+    if os.environ.get("GRADE_FIRST_REVIEW_DIR"):
+        return os.environ["GRADE_FIRST_REVIEW_DIR"]
     if ctx.checkpoint_dir:
         return os.path.join(
             os.path.dirname(os.path.normpath(ctx.checkpoint_dir)), "grade_first_review"

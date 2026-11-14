@@ -106,7 +106,9 @@ if [ -n "$PIPELINE_DIR" ] && [ -f "$PIPELINE_DIR/CUSTOM_BLOCKS" ]; then
         fi
     done
     ILAB_CMD=(python "$REPO/tools/ilab_grade_first.py")
+    export GRADE_FIRST_REVIEW_DIR="$OUT/grade_first_review"
     echo "Pipeline $PIPELINE_DIR has its own blocks: running ilab through tools/ilab_grade_first.py"
+    echo "Review files for checking the answers: $GRADE_FIRST_REVIEW_DIR"
 fi
 if [ ! -f "$MODEL_PATH/config.json" ]; then
     echo "ERROR: no model found at $MODEL_PATH (see docs/data-generation.md for downloading it)."
