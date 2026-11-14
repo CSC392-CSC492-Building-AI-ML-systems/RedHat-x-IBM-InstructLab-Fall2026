@@ -78,6 +78,28 @@ echo "Teacher: $TEACHER ($MODEL_PATH)"
 [ -n "$GEN_ARGS" ] && echo "Extra ilab data generate options: $GEN_ARGS"
 
 # ---- Checks that need no GPU -------------------------------------------------------
+if [[ "$GEN_ARGS" =~ --pipeline[[:space:]]+([^[:space:]]+) ]]; then
+    PIPELINE_DIR="${BASH_REMATCH[1]}"
+    for f in knowledge.yaml freeform_skills.yaml grounded_skills.yaml; do
+        if [ ! -f "$PIPELINE_DIR/$f" ]; then
+            echo "ERROR: pipeline folder $PIPELINE_DIR is missing $f. Create it first (e.g. tools/make_fixed_rubric_pipeline.py)."
+            exit 1
+        fi
+    done
+fi
+# A pipeline with its own blocks (it has a CUSTOM_BLOCKS file, like pipelines/grade_first) runs
+# through a launcher that registers the blocks first; anything else runs plain `ilab`.
+ILAB_CMD=(ilab)
+if [ -n "$PIPELINE_DIR" ] && [ -f "$PIPELINE_DIR/CUSTOM_BLOCKS" ]; then
+    for f in tools/ilab_grade_first.py tools/grade_first_blocks.py tools/gen_answers.py tools/extract_seeds.py; do
+        if [ ! -f "$REPO/$f" ]; then
+            echo "ERROR: $PIPELINE_DIR needs $f, which isn't in $REPO."
+            exit 1
+        fi
+    done
+    ILAB_CMD=(python "$REPO/tools/ilab_grade_first.py")
+    echo "Pipeline $PIPELINE_DIR has its own blocks: running ilab through tools/ilab_grade_first.py"
+fi
 if [ ! -f "$MODEL_PATH/config.json" ]; then
     echo "ERROR: no model found at $MODEL_PATH (see docs/data-generation.md for downloading it)."
     exit 1
@@ -182,7 +204,7 @@ FAMILY_ARGS=()
 [ -n "$MODEL_FAMILY" ] && FAMILY_ARGS=(--model-family "$MODEL_FAMILY")
 
 echo "Generating data, started $(date)"
-ilab data generate \
+"${ILAB_CMD[@]}" data generate \
     --endpoint-url "$ENDPOINT" \
     --model "$MODEL_PATH" \
     "${FAMILY_ARGS[@]}" \
