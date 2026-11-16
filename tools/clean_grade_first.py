@@ -12,11 +12,15 @@ Run on the output folder of jobs/generate_data.sh (OUT), or on one run folder in
     python3 tools/clean_grade_first.py OUT --dry-run          # only report what would be dropped
     python3 tools/clean_grade_first.py OUT --drop-unconfirmed # also drop answers whose level wasn't confirmed
 
+For a test set, also drop every answer that a training set already has word for word:
+    python3 tools/clean_grade_first.py OUT --exclude-answers data/combined/grade_first_v2/skills_train_msgs.jsonl
+
 It rewrites node_datasets_*/compositional_skills_*.jsonl (what combine_sdg.py --full-skills
 reads) and keeps the originals in node_datasets_*/original/. Running it again starts from the
 originals, so the options of the last run are the ones that apply. A report goes to
 clean_report.json in the run folder.
 """
+
 import argparse
 import glob
 import json
@@ -34,33 +38,95 @@ RUN_DIR = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{6}$")
 def run_folder(path):
     if RUN_DIR.match(os.path.basename(os.path.normpath(path))):
         return path
-    runs = sorted(d for d in os.listdir(path) if RUN_DIR.match(d) and os.path.isdir(os.path.join(path, d)))
+    runs = sorted(
+        d
+        for d in os.listdir(path)
+        if RUN_DIR.match(d) and os.path.isdir(os.path.join(path, d))
+    )
     if not runs:
         raise SystemExit(f"ERROR: no run folder (like 2026-11-14_125241) in {path}")
     return os.path.join(path, runs[-1])
 
 
 def student_answer(rec):
-    user = next((m["content"] for m in rec.get("messages", []) if m["role"] == "user"), rec.get("question", ""))
-    return user.split("Student Answer:", 1)[1].strip() if "Student Answer:" in user else ""
+    user = next(
+        (m["content"] for m in rec.get("messages", []) if m["role"] == "user"),
+        rec.get("question", ""),
+    )
+    return (
+        user.split("Student Answer:", 1)[1].strip() if "Student Answer:" in user else ""
+    )
+
+
+def answer_key(text):
+    return " ".join(text.split())
+
+
+def answers_in(paths):
+    """The student answers (whitespace ignored) of every example in these .jsonl files."""
+    seen = set()
+    for path in paths:
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                if line.strip():
+                    ans = student_answer(json.loads(line))
+                    if ans:
+                        seen.add(answer_key(ans))
+    return seen
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("folder", help="the OUT folder of the run, or a run folder inside it")
-    ap.add_argument("--drop-scenario", nargs="*", default=[], metavar="NAME",
-                    help="also drop every answer of these scenarios (e.g. larger_c)")
-    ap.add_argument("--drop-unconfirmed", action="store_true",
-                    help="also drop answers with a criterion in the unconfirmed column")
-    ap.add_argument("--dry-run", action="store_true", help="report only; change nothing")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument(
+        "folder", help="the OUT folder of the run, or a run folder inside it"
+    )
+    ap.add_argument(
+        "--drop-scenario",
+        nargs="*",
+        default=[],
+        metavar="NAME",
+        help="also drop every answer of these scenarios (e.g. larger_c)",
+    )
+    ap.add_argument(
+        "--drop-unconfirmed",
+        action="store_true",
+        help="also drop answers with a criterion in the unconfirmed column",
+    )
+    ap.add_argument(
+        "--exclude-answers",
+        nargs="*",
+        default=[],
+        metavar="JSONL",
+        help="also drop answers that appear word for word in these files (e.g. a training set)",
+    )
+    ap.add_argument(
+        "--dry-run", action="store_true", help="report only; change nothing"
+    )
     a = ap.parse_args()
+    exclude = answers_in(a.exclude_answers)
+    if a.exclude_answers:
+        print(f"{len(exclude)} answers to exclude, from {', '.join(a.exclude_answers)}")
 
     run = run_folder(a.folder)
-    files = sorted(glob.glob(os.path.join(run, "node_datasets_*", "compositional_skills_*.jsonl")))
+    files = sorted(
+        glob.glob(os.path.join(run, "node_datasets_*", "compositional_skills_*.jsonl"))
+    )
     if not files:
-        raise SystemExit(f"ERROR: no node_datasets_*/compositional_skills_*.jsonl in {run}")
-    report = {"run": run, "options": {"drop_scenario": a.drop_scenario, "drop_unconfirmed": a.drop_unconfirmed},
-              "skills": {}, "dropped": []}
+        raise SystemExit(
+            f"ERROR: no node_datasets_*/compositional_skills_*.jsonl in {run}"
+        )
+    report = {
+        "run": run,
+        "options": {
+            "drop_scenario": a.drop_scenario,
+            "drop_unconfirmed": a.drop_unconfirmed,
+            "exclude_answers": a.exclude_answers,
+        },
+        "skills": {},
+        "dropped": [],
+    }
     total_in = total_out = 0
     for path in files:
         backup = os.path.join(os.path.dirname(path), "original", os.path.basename(path))
@@ -72,6 +138,8 @@ def main():
             why = gx.text_problem(student_answer(r))
             if not why and r.get("scenario") in a.drop_scenario:
                 why = f"scenario {r['scenario']}"
+            if not why and exclude and answer_key(student_answer(r)) in exclude:
+                why = "the same answer is in the excluded data"
             if not why and a.drop_unconfirmed and r.get("unconfirmed"):
                 why = f"level unconfirmed for {r['unconfirmed']}"
             if why:
@@ -97,7 +165,9 @@ def main():
     else:
         with open(os.path.join(run, "clean_report.json"), "w", encoding="utf-8") as fh:
             json.dump(report, fh, indent=2)
-        print(f"originals kept in node_datasets_*/original/; report in {os.path.join(run, 'clean_report.json')}")
+        print(
+            f"originals kept in node_datasets_*/original/; report in {os.path.join(run, 'clean_report.json')}"
+        )
 
 
 if __name__ == "__main__":
