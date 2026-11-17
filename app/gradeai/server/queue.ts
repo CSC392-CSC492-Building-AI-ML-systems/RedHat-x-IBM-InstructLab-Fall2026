@@ -333,6 +333,16 @@ function runSimilarity(assignment: string, batchIds: Set<string>) {
   return touched.size
 }
 
+/** The worker could not reach its model: put the task back without counting it as an attempt. */
+export function release(taskId: string) {
+  const t = db.prepare('SELECT kind, ref FROM tasks WHERE id = ?').get(taskId) as { kind: string; ref: string | null } | undefined
+  if (!t) return { ok: false }
+  db.prepare(`UPDATE tasks SET status = 'queued', lease_until = NULL, attempts = MAX(attempts - 1, 0), updated_at = ? WHERE id = ?`).run(Date.now(), taskId)
+  if (t.kind === 'grade' && t.ref) docPatch(`submissions/${t.ref}`, { queueState: 'waiting', updatedAt: Date.now() })
+  pushModelStatus()
+  return { ok: true }
+}
+
 /* ---------- maintenance ---------- */
 
 export function cancelBatch(batchId: string) {

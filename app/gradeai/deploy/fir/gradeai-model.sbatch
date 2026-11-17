@@ -28,9 +28,23 @@ export VLLM_API_KEY="$(python -c 'import secrets; print(secrets.token_hex(16))')
 PORT="$(python -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])')"
 export VLLM_URL="http://127.0.0.1:${PORT}/v1"
 
+# Optional LoRA adapter (e.g. trained with Unsloth): serve the base model with the adapter on top.
+# The worker asks for MODEL_NAME, which is then the adapter, not the bare base model.
+SERVED_NAME="$MODEL_NAME"
+LORA_ARGS=()
+if [[ -n "${LORA_PATH:-}" ]]; then
+  RANK="$(python -c 'import json,sys; print(json.load(open(sys.argv[1] + "/adapter_config.json")).get("r", 16))' "$LORA_PATH")"
+  MAX_RANK=16
+  for r in 8 16 32 64 128 256 320 512; do if (( r >= RANK )); then MAX_RANK=$r; break; fi; done
+  LORA_ARGS=(--enable-lora --lora-modules "${MODEL_NAME}=${LORA_PATH}" --max-lora-rank "$MAX_RANK")
+  SERVED_NAME="${MODEL_NAME}-base"
+  echo "LoRA adapter ${LORA_PATH} (rank ${RANK}) on base ${MODEL_PATH}"
+fi
+
 echo "GradeAI model job ${SLURM_JOB_ID} on $(hostname) — model ${MODEL_PATH}"
 vllm serve "$MODEL_PATH" \
-  --served-model-name "$MODEL_NAME" \
+  --served-model-name "$SERVED_NAME" \
+  "${LORA_ARGS[@]}" \
   --host 127.0.0.1 --port "$PORT" \
   --api-key "$VLLM_API_KEY" \
   --max-model-len "${MAX_MODEL_LEN:-8192}" \

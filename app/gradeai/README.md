@@ -61,12 +61,14 @@ cd gradeai-setup && bash setup-fir.sh
 ```
 
 **c. Configure** `~/gradeai/gradeai.env`:
-- `MODEL_PATH`: the folder from step a
+- `MODEL_PATH`: the folder from step a. If you trained a LoRA adapter (Unsloth, PEFT), set this to the base model and `LORA_PATH` to the adapter folder; vLLM serves the base with your adapter on top.
 - `GRADEAI_URL`: your web server
 - `GRADEAI_WORKER_TOKEN`: the same value as `WORKER_TOKEN` on the server
 - `MAX_MODEL_LEN`: your base model's context, e.g. 4096 for granite-7b-lab
 
 Then set `--account=def-yourpi` and `--time` in `~/gradeai/gradeai-model.sbatch`.
+
+**Qwen3.5 / 3.6 / 3.8 models:** these need vLLM 0.17 or newer (the setup script warns if it's older). In `gradeai.env`, set `VLLM_EXTRA_ARGS=--language-model-only` (text only, so more GPU memory goes to grading) and keep `ENABLE_THINKING=false` unless your training data contained the model's reasoning. If the model replies with nonsense such as `!!!!` when served with `LORA_PATH`, vLLM isn't applying the adapter to every layer. Merge it into the base once with `sbatch --export=ALL,TRAIN_VENV=<your training venv> ~/gradeai/merge-lora.sbatch <base> <adapter> <new folder>`, then put the new folder in `MODEL_PATH` and leave `LORA_PATH` empty.
 
 **d. Start it:**
 
@@ -76,6 +78,32 @@ tail -f gradeai-model-<jobid>.out        # "vLLM is up" → GradeAI shows the mo
 ```
 
 GradeAI's sidebar shows **Model online** with the job number and end time, and any waiting files start grading.
+
+### Alternative: website on your laptop, model through an SSH tunnel
+
+Good for trying your real model before you have a server. Only you can use the site this way, because it lives at `localhost` on your laptop.
+
+1. **On Fir**, serve the model in a job, reachable by your tunnel and protected by a key:
+   ```bash
+   salloc --account=def-yourpi --gpus=h100:1 --cpus-per-task=8 --mem=64G --time=3:00:00
+   hostname                                   # note the node name, e.g. fc10203
+   module load opencv/4.11 python/3.12 && source ~/gradeai/vllm_env/bin/activate
+   export VLLM_API_KEY=$(python -c 'import secrets; print(secrets.token_hex(16))'); echo $VLLM_API_KEY
+   vllm serve ~/projects/def-yourpi/gradeai/model --served-model-name gradeai-csc236 \
+     --host 0.0.0.0 --port 18000 --api-key $VLLM_API_KEY --max-model-len 8192
+   ```
+2. **On your laptop**, open the tunnel (approve the MFA prompt) and leave it running:
+   ```bash
+   ssh -N -L 18000:fc10203:18000 you@fir.alliancecan.ca
+   ```
+3. **On your laptop**, run GradeAI (`npm start`) and the worker:
+   ```bash
+   GRADEAI_URL=http://localhost:8080 GRADEAI_WORKER_TOKEN=<WORKER_TOKEN from .env> \
+   VLLM_URL=http://localhost:18000/v1 VLLM_API_KEY=<key from step 1> MODEL_NAME=gradeai-csc236 \
+   python3 deploy/fir/gradeai_worker.py
+   ```
+
+If the tunnel drops (laptop sleeps, Wi-Fi changes), the worker pauses and puts unfinished files back in the queue; reopen the tunnel and it resumes. Closing the `salloc` session stops the model.
 
 ### Keeping the model available
 

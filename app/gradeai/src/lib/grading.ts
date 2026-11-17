@@ -172,7 +172,8 @@ ${text.slice(0, 20000)}
 
 /** Parse a model reply that should be JSON but may carry a fence or a sentence around it. */
 export function parseJsonLoose(text: string): unknown {
-  const t = text.trim()
+  // Reasoning models may write <think>…</think> before the answer; braces in there are not the answer.
+  const t = text.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/^[\s\S]*<\/think>/, '').trim()
   try { return JSON.parse(t) } catch { /* fall through */ }
   const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/)
   if (fence) { try { return JSON.parse(fence[1]) } catch { /* fall through */ } }

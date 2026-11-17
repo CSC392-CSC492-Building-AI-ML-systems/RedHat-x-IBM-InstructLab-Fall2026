@@ -16,6 +16,7 @@ Environment (normally set in ~/gradeai/gradeai.env):
   MODEL_NAME             --served-model-name given to vLLM
   WORKER_CONCURRENCY     parallel requests to vLLM (default 8)
   JSON_MODE              json_schema | guided_json | none  (default json_schema)
+  ENABLE_THINKING        true to let Qwen3-family models reason before answering (default false)
   STOP_BEFORE_END_SEC    stop taking new work this long before the job ends (default 600)
 """
 
@@ -41,10 +42,13 @@ MODEL = os.environ.get("MODEL_NAME", "gradeai")
 CONCURRENCY = max(1, int(os.environ.get("WORKER_CONCURRENCY", "8")))
 JSON_MODE = os.environ.get("JSON_MODE", "json_schema")
 STOP_BEFORE_END = int(os.environ.get("STOP_BEFORE_END_SEC", "600"))
+# Qwen3-family models "think" before answering unless told not to. Grading wants the JSON answer only.
+ENABLE_THINKING = os.environ.get("ENABLE_THINKING", "false").lower() in ("1", "true", "yes")
 JOB_ID = os.environ.get("SLURM_JOB_ID")
 NODE = socket.gethostname()
 
 stopping = threading.Event()
+model_up = threading.Event()  # cleared when vLLM can't be reached (crashed, or an SSH tunnel dropped)
 active = 0
 active_lock = threading.Lock()
 
@@ -104,13 +108,28 @@ def wait_for_vllm(limit_sec=1800):
     return False
 
 
+def model_reachable():
+    try:
+        http_json("GET", f"{VLLM}/models", headers={"Authorization": f"Bearer {VLLM_KEY}"} if VLLM_KEY else None, timeout=10)
+        return True
+    except Exception:
+        return False
+
+
+def is_connection_error(e):
+    return isinstance(e, (urllib.error.URLError, ConnectionError, TimeoutError, socket.timeout)) and not isinstance(e, urllib.error.HTTPError)
+
+
 def chat(task, structured=True):
     body = {
         "model": MODEL,
         "messages": task["messages"],
         "temperature": task.get("temperature", 0),
         "max_tokens": task.get("max_tokens", 1500),
+        "chat_template_kwargs": {"enable_thinking": ENABLE_THINKING},
     }
+    if ENABLE_THINKING:
+        body["max_tokens"] = body["max_tokens"] + 4000  # room for the reasoning before the JSON
     if structured and task.get("json_schema") and JSON_MODE == "json_schema":
         body["response_format"] = {"type": "json_schema", "json_schema": {"name": task["kind"], "schema": task["json_schema"]}}
     elif structured and task.get("json_schema") and JSON_MODE == "guided_json":
@@ -147,6 +166,15 @@ def run_task(task):
         post_result({"id": task["id"], "ok": True, "content": content, "model": MODEL})
         log(f"done {task['kind']} {task['id']} in {time.time() - started:.1f}s")
     except Exception as e:
+        if is_connection_error(e):
+            # The model is unreachable, not the file's fault: hand it back and pause.
+            model_up.clear()
+            log(f"model unreachable ({e}); returning {task['id']} to the queue")
+            try:
+                server("release", {"id": task["id"]})
+            except Exception:
+                pass  # the server returns it to the queue when the lease expires
+            return
         msg = str(e)
         if "maximum context length" in msg.lower() or "context length" in msg.lower():
             msg = "The submission is too long for the model's context window. Lower 'Max submission length' in GradeAI Settings or raise MAX_MODEL_LEN."
@@ -159,6 +187,9 @@ def run_task(task):
 
 def heartbeat_loop():
     while not stopping.is_set():
+        if not model_up.is_set():
+            stopping.wait(5)
+            continue
         try:
             s = server("heartbeat", status_body())
             if s.get("waiting"):
@@ -188,6 +219,7 @@ def main():
     except Exception as e:
         log(f"cannot reach {SERVER}: {e}")
         sys.exit(1)
+    model_up.set()
     threading.Thread(target=heartbeat_loop, daemon=True).start()
 
     idle = 2
@@ -196,6 +228,14 @@ def main():
             if near_end():
                 log("job is about to end: no new work")
                 break
+            if not model_up.is_set():
+                # Stop taking work (GradeAI shows the model offline) until vLLM answers again.
+                if model_reachable():
+                    log("model reachable again; resuming")
+                    model_up.set()
+                else:
+                    stopping.wait(10)
+                    continue
             free = CONCURRENCY - active
             if free <= 0:
                 time.sleep(0.5)

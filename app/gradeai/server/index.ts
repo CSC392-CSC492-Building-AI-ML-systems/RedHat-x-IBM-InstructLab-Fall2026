@@ -12,7 +12,7 @@ import { docDelete, docGet, docList, docPatch, docSet, docsRouter } from './docs
 import { addClient, disconnectUser } from './events'
 import { ocrFile, ocrTools } from './ocr'
 import {
-  cancelBatch, checkBatch, claim, complete, dropTasksFor, enqueueGrade, heartbeat, importRubric, logActivity, modelStatus, settings, startMaintenance,
+  cancelBatch, checkBatch, claim, complete, release, dropTasksFor, enqueueGrade, heartbeat, importRubric, logActivity, modelStatus, settings, startMaintenance,
 } from './queue'
 import { matchRoster } from '../src/lib/grading'
 import { DEFAULT_SETTINGS, SEED_RUBRICS } from '../src/lib/defaults'
@@ -62,6 +62,8 @@ worker.post('/result', (req, res) => {
   const b = req.body ?? {}
   res.json(complete(String(b.id), !!b.ok, String(b.content ?? ''), String(b.error ?? ''), b.model ? String(b.model) : null))
 })
+
+worker.post('/release', (req, res) => { res.json(release(String(req.body?.id ?? ''))) })
 
 api.use('/worker', worker)
 

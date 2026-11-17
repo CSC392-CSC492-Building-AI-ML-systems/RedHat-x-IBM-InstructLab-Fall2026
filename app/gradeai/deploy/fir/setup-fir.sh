@@ -17,8 +17,15 @@ source "$DEST/vllm_env/bin/activate"
 pip install --no-index --upgrade pip
 pip install --no-index vllm${VLLM_VERSION:+==$VLLM_VERSION}
 python -c "import vllm; print('vLLM', vllm.__version__, 'installed')"
+python - <<'PY'
+import vllm
+major, minor = (int(x) for x in vllm.__version__.split('.')[:2])
+if (major, minor) < (0, 17):
+    print(f"Warning: vLLM {vllm.__version__} is older than 0.17, which Qwen3.5/3.6/3.8 models need.")
+    print("Try: pip install --no-index 'vllm>=0.17'  (or, from a login node: pip install 'vllm>=0.17')")
+PY
 
-cp "$HERE/gradeai_worker.py" "$HERE/gradeai-model.sbatch" "$DEST/"
+cp "$HERE/gradeai_worker.py" "$HERE/gradeai-model.sbatch" "$HERE/merge_lora.py" "$HERE/merge-lora.sbatch" "$DEST/"
 chmod +x "$DEST/gradeai_worker.py"
 if [[ ! -f "$DEST/gradeai.env" ]]; then
   cp "$HERE/gradeai.env.example" "$DEST/gradeai.env"
