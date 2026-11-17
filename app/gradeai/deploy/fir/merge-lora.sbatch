@@ -11,8 +11,9 @@
 set -euo pipefail
 BASE="$1"; ADAPTER="$2"; OUT="$3"
 
-module load opencv/4.11 python/3.12
-# CHANGE THIS to the virtualenv you trained the adapter with:
+# The modules and virtualenv you trained the adapter with, e.g.
+#   sbatch --export=ALL,MODULES="gcc arrow/25.0.0 python/3.13 cuda/12.9",TRAIN_VENV=/path/to/env/train/.venv merge-lora.sbatch ...
+module load ${MODULES:-python/3.12}
 source "${TRAIN_VENV:?Set TRAIN_VENV to your training virtualenv, e.g. sbatch --export=ALL,TRAIN_VENV=/path/to/venv ...}/bin/activate"
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 

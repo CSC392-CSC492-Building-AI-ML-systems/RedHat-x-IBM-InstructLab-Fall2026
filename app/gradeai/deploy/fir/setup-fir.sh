@@ -7,15 +7,21 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 DEST="${GRADEAI_HOME:-$HOME/gradeai}"
 mkdir -p "$DEST"
 
-module load opencv/4.11 python/3.12
+module load ${MODULES:-opencv/4.11 python/3.12}
 
-if [[ ! -x "$DEST/vllm_env/bin/python" ]]; then
-  echo "Creating the vLLM environment in $DEST/vllm_env (a few minutes)…"
-  virtualenv --no-download "$DEST/vllm_env"
+if [[ -n "${VLLM_VENV:-}" ]]; then
+  # Reuse an existing environment (set VLLM_VENV and MODULES, and put the same two lines in gradeai.env).
+  echo "Using your existing environment $VLLM_VENV"
+  source "$VLLM_VENV/bin/activate"
+else
+  if [[ ! -x "$DEST/vllm_env/bin/python" ]]; then
+    echo "Creating the vLLM environment in $DEST/vllm_env (a few minutes)…"
+    virtualenv --no-download "$DEST/vllm_env"
+  fi
+  source "$DEST/vllm_env/bin/activate"
+  pip install --no-index --upgrade pip
+  pip install --no-index vllm${VLLM_VERSION:+==$VLLM_VERSION}
 fi
-source "$DEST/vllm_env/bin/activate"
-pip install --no-index --upgrade pip
-pip install --no-index vllm${VLLM_VERSION:+==$VLLM_VERSION}
 python -c "import vllm; print('vLLM', vllm.__version__, 'installed')"
 python - <<'PY'
 import vllm

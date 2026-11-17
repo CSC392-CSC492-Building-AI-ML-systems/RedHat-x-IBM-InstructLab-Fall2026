@@ -18,8 +18,9 @@ set -euo pipefail
 GRADEAI_HOME="${GRADEAI_HOME:-$HOME/gradeai}"
 set -a; source "$GRADEAI_HOME/gradeai.env"; set +a
 
-module load opencv/4.11 python/3.12
-source "$GRADEAI_HOME/vllm_env/bin/activate"
+# Use your own environment if you have one (VLLM_VENV + MODULES in gradeai.env), else the one setup-fir.sh made.
+module load ${MODULES:-opencv/4.11 python/3.12}
+source "${VLLM_VENV:-$GRADEAI_HOME/vllm_env}/bin/activate"
 
 # Weights are read from disk only.
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
