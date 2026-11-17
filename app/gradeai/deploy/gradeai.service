@@ -1,0 +1,21 @@
+# Without Docker: copy the built app to /opt/gradeai, create a "gradeai" user, then
+#   sudo cp deploy/gradeai.service /etc/systemd/system/ && sudo systemctl enable --now gradeai
+# Put a reverse proxy with HTTPS (Caddy, nginx) in front of port 8080.
+[Unit]
+Description=GradeAI web server
+After=network.target
+
+[Service]
+User=gradeai
+WorkingDirectory=/opt/gradeai
+EnvironmentFile=/opt/gradeai/.env
+Environment=DATA_DIR=/var/lib/gradeai
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning dist-server/index.mjs
+Restart=on-failure
+StateDirectory=gradeai
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/gradeai
+
+[Install]
+WantedBy=multi-user.target

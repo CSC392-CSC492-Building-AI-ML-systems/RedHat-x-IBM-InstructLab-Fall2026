@@ -1,0 +1,10 @@
+{$GRADEAI_DOMAIN} {
+	encode gzip
+	request_body {
+		max_size 700MB
+	}
+	reverse_proxy gradeai:8080 {
+		# keep live updates (Server-Sent Events) streaming
+		flush_interval -1
+	}
+}
