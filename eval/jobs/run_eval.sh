@@ -22,6 +22,7 @@
 #   ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh
 #   ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh -- --test-type paraphrase,sensitivity
 #   sbatch eval/jobs/run_eval.sh          # no ADAPTER: base model only, no comparison
+#   TEST_SET=A ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh   # Group A test set
 # Check the setup without a GPU, on a login node:
 #   ADAPTER=models/adapters/<name> bash eval/jobs/run_eval.sh --check
 #
@@ -32,6 +33,8 @@
 #   ADAPTER     the fine-tuned LoRA folder, from training/train_lora.py. Optional. The job never
 #               assumes a grading-skills adapter exists: it checks the folder, and the adapter's
 #               training data is printed so you can confirm it.
+#   TEST_SET    B (default, test_set/groupB_60_draft.json) or A (test_set/groupA_40_final.json,
+#               graded with each case's own general rules)
 #   BASE_MODEL  base model folder (default models/Qwen3.8-27B, as in jobs/serve_model.sh)
 #   EVAL_OUT    where results go (default ~/scratch/gradeai-eval). Must be outside the repo: the
 #               outputs contain test-set text. Each job writes EVAL_OUT/<job id>/.
@@ -60,6 +63,7 @@ EVAL_ARGS=("$@")
 REPO="${SLURM_SUBMIT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 cd "$REPO"
 
+TEST_SET="${TEST_SET:-B}"
 BASE_MODEL="${BASE_MODEL:-models/Qwen3.8-27B}"
 ADAPTER="${ADAPTER:-}"
 EVAL_OUT="${EVAL_OUT:-$HOME/scratch/gradeai-eval}"
@@ -73,7 +77,7 @@ STOP_TIMEOUT="${STOP_TIMEOUT:-20}"
 VLLM_PID=""
 
 echo "GradeAI evaluation, job $JOB_TAG on $(hostname), started $(date)"
-echo "Base model: $BASE_MODEL   Adapter: ${ADAPTER:-none}   Output: $EVAL_OUT"
+echo "Test set: Group $TEST_SET   Base model: $BASE_MODEL   Adapter: ${ADAPTER:-none}   Output: $EVAL_OUT"
 [ ${#EVAL_ARGS[@]} -gt 0 ] && echo "Options for both runs: ${EVAL_ARGS[*]}"
 
 # ---- Environment (the same modules as jobs/serve_model.sh) ----------------------------------
@@ -90,7 +94,7 @@ source "$VENV/bin/activate"
 
 # ---- Checks that need no GPU ------------------------------------------------------------------
 if ! PREFLIGHT="$(python -m eval.jobs.preflight --base-model "$BASE_MODEL" --adapter "$ADAPTER" \
-    --out "$EVAL_OUT" -- "${EVAL_ARGS[@]}")"; then
+    --out "$EVAL_OUT" --group "$TEST_SET" -- "${EVAL_ARGS[@]}")"; then
     exit 1
 fi
 eval "$PREFLIGHT"
@@ -210,7 +214,7 @@ only_run() {
 }
 
 echo "Base model run, started $(date)"
-python -u eval/run_eval.py --model base --out "$RUN_ROOT/base" \
+python -u eval/run_eval.py --model base --out "$RUN_ROOT/base" --group "$DATASET_GROUP" \
     --endpoint "$ENDPOINT" --base-model "$BASE_MODEL_RECORD" "${EVAL_ARGS[@]}"
 BASE_RUN="$(only_run "$RUN_ROOT/base")"
 
@@ -220,7 +224,7 @@ if [ "$MODE" = "base_only" ]; then
 fi
 
 echo "Fine-tuned run, started $(date)"
-python -u eval/run_eval.py --model fine_tuned --out "$RUN_ROOT/fine_tuned" \
+python -u eval/run_eval.py --model fine_tuned --out "$RUN_ROOT/fine_tuned" --group "$DATASET_GROUP" \
     --endpoint "$ENDPOINT" --adapter "$ADAPTER_PATH" "${EVAL_ARGS[@]}"
 FT_RUN="$(only_run "$RUN_ROOT/fine_tuned")"
 
@@ -228,5 +232,9 @@ python -u eval/compare.py --base "$BASE_RUN" --fine-tuned "$FT_RUN" --out "$RUN_
     "${COMPARE_ARGS[@]}"
 
 echo "Done at $(date). Results are in $RUN_ROOT"
-echo "All results are provisional: the Group B labels are AI-drafted and human-reviewed, but not independently TA-verified or frozen."
+if [ "$DATASET_GROUP" = "A" ]; then
+    echo "All results are provisional: the Group A labels are teacher-model generated and AI-audited, with human decisions on 4 cases, but not independently human-verified or frozen."
+else
+    echo "All results are provisional: the Group B labels are AI-drafted and human-reviewed, but not independently TA-verified or frozen."
+fi
 echo "Scratch is purged of old files: copy anything worth keeping to the team folder."

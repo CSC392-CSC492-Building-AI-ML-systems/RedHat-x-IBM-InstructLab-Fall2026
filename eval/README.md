@@ -2,7 +2,16 @@
 
 Runs the test set against the base model and the fine-tuned model with identical prompts and decoding settings, parses each criterion-level grade, scores it against the labels, and compares the two models. Part of milestone 7.
 
-> **All results are provisional.** The Group B labels (v3) are AI-drafted and human-reviewed, but not independently TA-verified or frozen. Every output file says so.
+> **All results are provisional.** The Group B labels (v3) are AI-drafted and human-reviewed, but not independently TA-verified or frozen. The Group A labels (final v1) are teacher-model generated and checked in an AI-assisted audit, with human decisions on 4 cases, but not independently human-verified or frozen. Every output file says which labels it was scored against.
+
+## Test sets
+
+| Group | File | Selected with | General rules in the prompt |
+|---|---|---|---|
+| B (default) | `test_set/groupB_60_draft.json`, SHA-256 `ecd69def…` | nothing, or `--group B` | the dataset's 4 `grading_policies`, the same for every case |
+| A | `test_set/groupA_40_final.json`, SHA-256 `226fb916…` | `--group A` (job: `TEST_SET=A`) | each case's own `general_rules`, from its training seed |
+
+`--dataset` and `--expected-sha256` override the group's file and hash, and the file's cases must belong to that group. Runs of different groups can't be compared. Group A has only `original` cases, so its consistency, fairness, sensitivity and robustness metrics have no pairs.
 
 ## Use
 
@@ -12,6 +21,7 @@ On Fir, as one SLURM job (see the header of [`jobs/run_eval.sh`](jobs/run_eval.s
 ADAPTER=models/adapters/<name> bash eval/jobs/run_eval.sh --check     # login node, no GPU
 ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh            # base, fine-tuned, comparison
 sbatch eval/jobs/run_eval.sh -- --test-type paraphrase,sensitivity     # options go to both runs
+TEST_SET=A ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh # Group A test set
 ```
 
 By hand, with a vLLM server already running:
@@ -22,6 +32,7 @@ python eval/run_eval.py --model fine_tuned --adapter models/adapters/<name> --ou
     --endpoint http://localhost:8000/v1
 python eval/compare.py --base <base run> --fine-tuned <fine-tuned run> --out ~/scratch/gradeai-eval/compare
 python eval/run_eval.py --rescore <run folder>      # re-score saved replies with the current code, no model
+python eval/run_eval.py --group A --model base --out ~/scratch/gradeai-eval/runs --endpoint http://localhost:8000/v1
 ```
 
 Filters: `--test-type`, `--topic`, `--question-id`. Output folders must be outside the repo, because they contain test-set text. If a run stops early (time limit, crash), start a new one: only runs with status `complete` can be compared or re-scored.
@@ -30,8 +41,8 @@ Filters: `--test-type`, `--topic`, `--question-id`. Output folders must be outsi
 
 | File | Does |
 |---|---|
-| `dataset.py` | Loads the test set and checks its SHA-256. Selects cases with filters, adding variant parents as context. |
-| `prompt.py` | Builds the prompt (question, rubric, the 4 grading policies, output format, answer), with a leak guard and template hash. See [`PROMPT.md`](PROMPT.md). |
+| `dataset.py` | Loads a test set (Group B or A) and checks its SHA-256 and group. Selects cases with filters, adding variant parents as context. |
+| `prompt.py` | Builds the prompt (question, rubric, general rules, output format, answer), with a leak guard and template hash. See [`PROMPT.md`](PROMPT.md). |
 | `backends.py` | Sends prompts to vLLM: fixed decoding, no retries, failures recorded. |
 | `parse.py` | Parses the Markdown grade. Failed predictions are never turned into 0. |
 | `metrics.py` | All metrics, with paired-ready bootstrap intervals. |

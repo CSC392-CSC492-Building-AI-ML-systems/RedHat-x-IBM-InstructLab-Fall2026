@@ -1,5 +1,13 @@
 """Load the test set read-only, check it, and choose the cases for a run.
 
+Two test sets are supported, told apart by their cases' `group` field:
+- Group B (test_set/groupB_60_draft.json, the default): the model sees question, rubric and
+  student_answer, and the general rules are the dataset-level `grading_policies`, the same for
+  every case.
+- Group A (test_set/groupA_40_final.json): the model also sees each case's own `general_rules`,
+  the question-specific rules of the training seed the question comes from. There is no
+  dataset-level `grading_policies`.
+
 The file is identified by its SHA-256 hash, not its name. The repo's test_set/groupB_60_draft.json
 holds Group B draft v3, although v2 had the same file name, and its version field did not change
 when grading_policies[1] was shortened on 2026-10-30. Loading stops if the hash is not the one
@@ -31,11 +39,43 @@ DEFAULT_DATASET = REPO / "test_set" / "groupB_60_draft.json"
 # ans02_kw1 were reworded and the review metadata was updated. No score or level changed.
 EXPECTED_SHA256 = "ecd69def58cf75b87032ef96419767e008e7481150170839411b47e8f1011cbc"
 
+GROUP_A_DATASET = REPO / "test_set" / "groupA_40_final.json"
+# Group A final v1 ("final-v1-2026-11-16"), 40 originals. Labels are teacher-model generated, checked
+# in an AI-assisted audit, with human decisions on 4 cases; not human-verified end to end, not frozen.
+GROUP_A_SHA256 = "226fb91602ed06d3192b495a4ab2085553e3ee41fa1745c3337de4f0dcab81cc"
+
 LEVELS = ("full", "partial", "minimal", "none")
 TEST_TYPES = ("original", "paraphrase", "fairness", "sensitivity", "robustness")
-# The prompt builder knows how to render exactly these fields.
+# The prompt builder renders exactly these fields of a case; the general rules are passed apart.
 GRADER_VISIBLE = ("question", "rubric", "student_answer")
 TEST_ID_RE = re.compile(r"^csc236_B_[a-z]+_[0-9]{2}_ans[0-9]{2}(_(para|fair|sens|inj|kw)[0-9])?$")
+TEST_ID_RE_A = re.compile(r"^csc236_A_[a-z]+(_[a-z]+)*_[0-9]{2}_a[0-9]{2}$")
+RULES_DATASET = "dataset grading_policies"
+RULES_CASE = "case general_rules"
+
+
+@dataclass(frozen=True)
+class Group:
+    """What differs between the supported test sets."""
+    name: str
+    grader_visible: tuple[str, ...]   # the dataset's grader_visible_fields, exactly
+    rules_source: str                 # RULES_DATASET or RULES_CASE
+    test_id_re: re.Pattern
+    default_path: Path
+    default_sha256: str
+    labels_note: str                  # what the labels are, for run configs and summaries
+
+
+GROUPS = {
+    "B": Group("B", GRADER_VISIBLE, RULES_DATASET, TEST_ID_RE, DEFAULT_DATASET, EXPECTED_SHA256,
+               "Scored against Group B AI-drafted labels, human-reviewed; provisional and not independently "
+               "TA-verified or frozen. Not answer-key results."),
+    "A": Group("A", ("question", "rubric", "general_rules", "student_answer"), RULES_CASE, TEST_ID_RE_A,
+               GROUP_A_DATASET, GROUP_A_SHA256,
+               "Scored against Group A labels: teacher-model generated, checked in an AI-assisted mathematical "
+               "audit, with human decisions on 4 cases; not independently human-verified or frozen. Not "
+               "answer-key results."),
+}
 MARKS_RE = re.compile(r"\[(\d+) marks\]\s*$")
 IDENTICAL_TYPES = ("paraphrase", "fairness", "robustness")
 
@@ -83,15 +123,45 @@ class Dataset:
 
     @property
     def grading_policies(self) -> list[str]:
+        """Group B's dataset-level rules. Group A has none: use general_rules(case)."""
         return list(self.data["grading_policies"])
+
+    @property
+    def group(self) -> Group:
+        return GROUPS[group_name(self.data)]
+
+    def general_rules(self, case: dict) -> list[str]:
+        """The general rules shown in this case's prompt."""
+        if self.group.rules_source == RULES_CASE:
+            return list(case["general_rules"])
+        return self.grading_policies
 
     def by_id(self) -> dict[str, dict]:
         return {c["test_id"]: c for c in self.cases}
 
     def describe(self) -> dict:
         """What a run config records about the dataset."""
-        return {"path": str(self.path), "sha256": self.sha256, "version": self.version,
+        info = {"path": str(self.path), "sha256": self.sha256, "version": self.version,
                 "status": self.status, "case_count": len(self.cases)}
+        if self.group.name != "B":  # Group B configs stay as they were; a config without it is Group B
+            info["group"] = self.group.name
+        return info
+
+
+def group_name(data: dict) -> str:
+    """The test set's group, from its cases' `group` field. Raises if it is missing, mixed or unknown."""
+    names = {c.get("group") for c in data.get("test_cases") or []}
+    if len(names) != 1:
+        raise DatasetError(f"the cases' group fields are {sorted(map(str, names))}; expected one group")
+    name = names.pop()
+    if name not in GROUPS:
+        raise DatasetError(f"unknown test-set group {name!r}; supported: {sorted(GROUPS)}")
+    return name
+
+
+def labels_note(config_dataset: dict) -> str:
+    """The labels note for a run config's `dataset` entry (no `group` key means Group B)."""
+    return GROUPS[config_dataset.get("group", "B")].labels_note
 
 
 def load(path=DEFAULT_DATASET, expected_sha256: str | None = EXPECTED_SHA256) -> Dataset:
@@ -106,10 +176,34 @@ def load(path=DEFAULT_DATASET, expected_sha256: str | None = EXPECTED_SHA256) ->
         raise DatasetError(f"{path} has SHA-256 {digest}, expected {expected_sha256}. "
                            "This is not the dataset version this run expects.")
     data = json.loads(raw.decode("utf-8"))
-    if data.get("grader_visible_fields") != list(GRADER_VISIBLE):
-        raise DatasetError(f"grader_visible_fields is {data.get('grader_visible_fields')}; the prompt "
-                           f"builder supports exactly {list(GRADER_VISIBLE)}")
+    group = GROUPS[group_name(data)]
+    if data.get("grader_visible_fields") != list(group.grader_visible):
+        raise DatasetError(f"grader_visible_fields is {data.get('grader_visible_fields')}; for Group {group.name} "
+                           f"the prompt builder supports exactly {list(group.grader_visible)}")
+    if group.rules_source == RULES_DATASET and not _rules_ok(data.get("grading_policies")):
+        raise DatasetError("Group B needs a non-empty list of text grading_policies")
+    if group.rules_source == RULES_CASE:
+        bad = [c.get("test_id") for c in data["test_cases"] if not _rules_ok(c.get("general_rules"))]
+        if bad:
+            raise DatasetError(f"cases without a non-empty list of text general_rules: {bad[:5]}")
+        if "grading_policies" in data:
+            raise DatasetError(f"Group {group.name} uses per-case general_rules, but the file also has "
+                               "grading_policies; it is not clear which rules to show")
     return Dataset(path=path, sha256=digest, data=data)
+
+
+def load_group(name: str, path=None, expected_sha256: str | None = "default") -> Dataset:
+    """Load a group's test set: its default file and hash unless given. Checks the group matches."""
+    group = GROUPS[name]
+    ds = load(path or group.default_path,
+              group.default_sha256 if expected_sha256 == "default" else expected_sha256)
+    if ds.group.name != name:
+        raise DatasetError(f"{ds.path} is a Group {ds.group.name} test set, not Group {name}")
+    return ds
+
+
+def _rules_ok(rules) -> bool:
+    return isinstance(rules, list) and bool(rules) and all(isinstance(r, str) and r.strip() for r in rules)
 
 
 def verify_unchanged(ds: Dataset) -> None:
@@ -232,6 +326,7 @@ def check_structure(ds: Dataset) -> list[str]:
     for dup in sorted({i for i in ids if ids.count(i) > 1}):
         problems.append(f"{dup}: test_id appears more than once")
     cases = ds.by_id()
+    test_id_re = ds.group.test_id_re
     groups: dict[str, list[dict]] = {}
     for case in ds.cases:
         tid = case.get("test_id")
@@ -241,7 +336,7 @@ def check_structure(ds: Dataset) -> list[str]:
             here.append(f"fields missing {sorted(expected_keys - keys)}, unexpected {sorted(keys - expected_keys)}")
             problems += [f"{tid}: {p}" for p in here]
             continue
-        if not TEST_ID_RE.match(tid):
+        if not test_id_re.match(tid):
             here.append("test_id does not match the naming pattern")
         if case["test_type"] not in TEST_TYPES:
             here.append(f"unknown test_type {case['test_type']!r}")

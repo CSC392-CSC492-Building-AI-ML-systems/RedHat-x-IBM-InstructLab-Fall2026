@@ -34,8 +34,15 @@ Re-score a finished run with the current parser and metrics, without a model:
 
 This writes a new rescore_<timestamp>/ folder inside the run and leaves the raw outputs alone.
 
+The test set is Group B (test_set/groupB_60_draft.json) unless --group A is given, which uses
+test_set/groupA_40_final.json and each case's own general_rules. --dataset and --expected-sha256
+override the group's file and hash; the file's own group must match --group.
+
+    python eval/run_eval.py --group A --model base --out runs --endpoint http://localhost:8000/v1
+
 Every result is provisional: the Group B labels are AI-drafted and human-reviewed, but not
-independently TA-verified or frozen.
+independently TA-verified or frozen. The Group A labels are teacher-model generated and checked in
+an AI-assisted audit, with human decisions on 4 cases, but not independently human-verified or frozen.
 """
 
 from __future__ import annotations
@@ -61,8 +68,7 @@ RAW = "raw_outputs.jsonl"
 PARSED = "parsed.jsonl"
 METRICS = "metrics.json"
 SUMMARY = "summary.md"
-PROVISIONAL_NOTE = ("Scored against Group B AI-drafted labels, human-reviewed; provisional and not independently "
-                    "TA-verified or frozen. Not answer-key results.")
+PROVISIONAL_NOTE = dataset.GROUPS["B"].labels_note  # Group B; see dataset.labels_note for any run
 
 
 class RunError(Exception):
@@ -107,6 +113,15 @@ def git_info() -> dict:
 
 def environment() -> dict:
     return {"python": platform.python_version(), "platform": platform.platform(), "host": socket.gethostname()}
+
+
+def load_dataset(group: str | None, path: str | None, expected_sha256: str | None) -> dataset.Dataset:
+    """The run's test set. Without --group, a --dataset that is a group's default file selects that
+    group; otherwise the group is B. The hash defaults to the group's, and the file must be of that group."""
+    if group is None:
+        given = Path(path).expanduser().resolve() if path else None
+        group = next((g.name for g in dataset.GROUPS.values() if given == g.default_path.resolve()), "B")
+    return dataset.load_group(group, path, "default" if expected_sha256 is None else expected_sha256)
 
 
 def check_out_dir(out: Path) -> None:
@@ -238,13 +253,14 @@ def write_results(run_dir: Path, config: dict, ds, selection, raw, n_boot, seed)
     order = [i.test_id for i in selection.items]
     records = [{**parsed[t].to_record(), "role": selection.role(t)} for t in order]
     write_jsonl(run_dir / PARSED, records)
-    write_json(run_dir / METRICS, {"provisional": True, "note": PROVISIONAL_NOTE, "run": run_dir.name, **result})
+    write_json(run_dir / METRICS, {"provisional": True, "note": dataset.labels_note(config["dataset"]),
+                                   "run": run_dir.name, **result})
     (run_dir / SUMMARY).write_text(report.render_summary(config, result, records), encoding="utf-8")
     return result
 
 
 def run(args, client=None) -> tuple[Path, int]:
-    ds = dataset.load(args.dataset, expected_sha256=args.expected_sha256)
+    ds = load_dataset(args.group, args.dataset, args.expected_sha256)
     selection = dataset.select(ds, test_types=args.test_type, topics=args.topic, question_ids=args.question_id)
     backend, decoding = make_backend(args, client)
     served_model = backend.served_model
@@ -266,7 +282,7 @@ def run(args, client=None) -> tuple[Path, int]:
         "created_at": now(),
         "status": "running",
         "provisional": True,
-        "labels_note": PROVISIONAL_NOTE,
+        "labels_note": ds.group.labels_note,
         "dataset": ds.describe(),
         "prompt": prompt.describe(ds),
         "prompts_file": prompts_file,
@@ -368,8 +384,10 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--rescore", metavar="RUN_DIR", help="re-parse and re-score a finished run")
     p.add_argument("--model", choices=sorted(backends.SERVED_MODELS))
     p.add_argument("--out", help="folder for run folders")
-    p.add_argument("--dataset", default=str(dataset.DEFAULT_DATASET))
-    p.add_argument("--expected-sha256", default=dataset.EXPECTED_SHA256)
+    p.add_argument("--group", choices=sorted(dataset.GROUPS),
+                   help="test set: B (default, test_set/groupB_60_draft.json) or A (test_set/groupA_40_final.json)")
+    p.add_argument("--dataset", help="test set file (default: the group's file)")
+    p.add_argument("--expected-sha256", help="the test set's SHA-256 (default: the group's)")
     p.add_argument("--test-type", type=csv, help="comma-separated: " + ",".join(dataset.TEST_TYPES))
     p.add_argument("--topic", type=csv, help="comma-separated topics")
     p.add_argument("--question-id", type=csv, help="comma-separated question ids")

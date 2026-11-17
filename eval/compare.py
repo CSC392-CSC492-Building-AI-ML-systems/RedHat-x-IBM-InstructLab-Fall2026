@@ -228,7 +228,7 @@ def compare(base_dir: Path, ft_dir: Path, n_boot: int = metrics.N_BOOT, seed: in
     dataset.verify_unchanged(ds)
     return {
         "provisional": True,
-        "note": run_eval.PROVISIONAL_NOTE,
+        "note": dataset.labels_note(cfg["dataset"]),
         "created_at": run_eval.now(),
         "runs": {"base": str(base["dir"]), "fine_tuned": str(ft["dir"])},
         "models": {"base": cfg["model"], "fine_tuned": ft["config"]["model"]},
@@ -253,7 +253,7 @@ def signed(x) -> str:
 
 def render(result: dict) -> str:
     sh, mb, mf = result["shared"], result["metrics"]["base"], result["metrics"]["fine_tuned"]
-    lines = ["# Base vs fine-tuned comparison", "", report.PROVISIONAL, ""]
+    lines = ["# Base vs fine-tuned comparison", "", report.provisional_banner(sh["dataset"]), ""]
     if not sh["prompt"]["layout_verified"]:
         lines += [report.LAYOUT_UNVERIFIED, ""]
     lines += [f"> **Warning.** {w}" for w in result["warnings"]] + ([""] if result["warnings"] else [])

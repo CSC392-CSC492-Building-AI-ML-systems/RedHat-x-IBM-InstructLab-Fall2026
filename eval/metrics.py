@@ -409,7 +409,8 @@ def summarize(ds: dataset.Dataset, selection: dataset.Selection, parsed: dict[st
     result["labels"] = {"source": "draft_ground_truth", "dataset_version": ds.version,
                         "dataset_sha256": ds.sha256, "provisional": True,
                         "note": "AI-drafted labels, human-reviewed; provisional and not independently TA-verified "
-                                "or frozen. Not reportable answer-key results."}
+                                "or frozen. Not reportable answer-key results."
+                        if ds.group.name == "B" else ds.group.labels_note}
     result["settings"] = {"n_boot": n_boot, "seed": seed, "cluster": "question_id"}
     result["not_yet_implemented"] = NOT_YET_IMPLEMENTED
     result["definitions"] = DEFINITIONS

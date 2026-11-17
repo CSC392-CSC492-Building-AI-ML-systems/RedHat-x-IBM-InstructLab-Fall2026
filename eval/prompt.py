@@ -5,11 +5,14 @@ wrap, render_block, render_context), so that eval/ does not depend on that file.
 eval/tests/test_prompt.py pins the text this copy produces, but does not compare it with that file.
 The differences from the training prompt are deliberate, and eval/PROMPT.md lists them.
 
-Only question, rubric and student_answer from a case reach the prompt. The student answer is used
-verbatim, never cleaned up: some answers contain errors, injection text or fake grades on purpose.
+Only question, rubric and student_answer from a case reach the prompt, plus the general rules:
+Group B's dataset-level grading_policies, or a Group A case's own general_rules (eval/dataset.py).
+The student answer is used verbatim, never cleaned up: some answers contain errors, injection text or
+fake grades on purpose.
 
-To print the exact prompt for one case:
+To print the exact prompt for one case (the group follows from the test_id):
     python -m eval.prompt csc236_B_cind_01_ans01
+    python -m eval.prompt csc236_A_regex_04_a06
 """
 
 from __future__ import annotations
@@ -85,11 +88,17 @@ ANSWER_LABEL = "Student Answer:"
 ANSWER_LAYOUT = "{context}\n{output_format}\n\n" + ANSWER_LABEL + "\n{student_answer}"
 LAYOUT_VERIFIED = False
 
-# Held-out fields whose text must never appear in a prompt. topic, test_type, group and
-# review_status are left out: they are common words ("recurrences") that can appear in a rubric or
-# in the grading rules without anything leaking.
+# Held-out fields whose text must never appear in a prompt, whatever its length. topic, test_type,
+# group and review_status are left out: they are common words ("recurrences") that can appear in a
+# rubric or in the grading rules without anything leaking.
 LEAK_FIELDS = ("test_id", "question_id", "subtopic", "parent_test_id", "paraphrase_group",
-               "label_source", "provenance")
+               "label_source", "provenance", "seed_id")
+# Besides those, every text of at least this many characters anywhere in a held-out field (labels,
+# justifications, the generated reply, correction history, review notes, generation metadata) is
+# checked. Shorter texts are mostly level names and common words.
+LEAK_MIN_CHARS = 20
+# The fields of a case the model may see (Group A also shows general_rules). Everything else is held out.
+VISIBLE_FIELDS = ("question", "rubric", "general_rules", "student_answer")
 
 
 class PromptError(Exception):
@@ -133,15 +142,30 @@ def build_messages(grader_fields: dict, general_rules: list[str]) -> list[dict]:
 
 
 def short_question_id(question_id: str) -> str:
-    """The name the dataset's notes use for a question: csc236_B_nfa_16 -> nfa_16."""
-    return question_id.removeprefix("csc236_B_")
+    """The name the dataset's notes use for a question: csc236_B_nfa_16 -> nfa_16,
+    csc236_A_regex_04 -> regex_04."""
+    return re.sub(r"^csc236_[AB]_", "", question_id)
+
+
+def _texts(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for v in value.values():
+            yield from _texts(v)
+    elif isinstance(value, (list, tuple)):
+        for v in value:
+            yield from _texts(v)
 
 
 def held_out_strings(case: dict) -> list[str]:
     found = [case[f] for f in LEAK_FIELDS if isinstance(case.get(f), str) and case[f]]
     found.append(short_question_id(case["question_id"]))
     found += [g["justification"] for g in case["draft_ground_truth"]["criteria"] if g.get("justification")]
-    return found
+    for field, value in case.items():
+        if field not in VISIBLE_FIELDS:
+            found += [s for s in _texts(value) if len(s.strip()) >= LEAK_MIN_CHARS]
+    return list(dict.fromkeys(found))
 
 
 def check_no_leak(messages: list[dict], case: dict, general_rules: list[str]) -> None:
@@ -160,8 +184,9 @@ def check_no_leak(messages: list[dict], case: dict, general_rules: list[str]) ->
 
 
 def messages_for_case(ds: dataset.Dataset, case: dict) -> list[dict]:
-    messages = build_messages(dataset.grader_input(case), ds.grading_policies)
-    check_no_leak(messages, case, ds.grading_policies)
+    rules = ds.general_rules(case)
+    messages = build_messages(dataset.grader_input(case), rules)
+    check_no_leak(messages, case, rules)
     return messages
 
 
@@ -170,8 +195,12 @@ def messages_sha256(messages: list[dict]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def template_hash(general_rules: list[str]) -> str:
-    """Changes whenever anything that shapes the prompt changes, apart from the case itself."""
+def template_hash(general_rules: list[str], rules_source: str = dataset.RULES_DATASET) -> str:
+    """Changes whenever anything that shapes the prompt changes, apart from the case itself.
+
+    With per-case rules (Group A) the rules are part of each case, like its rubric: pass [] and
+    rules_source=RULES_CASE. The prompts file hash and the dataset hash cover them.
+    """
     parts = {
         "version": TEMPLATE_VERSION,
         "system": SYSTEM,
@@ -184,14 +213,27 @@ def template_hash(general_rules: list[str]) -> str:
         "wrap": WRAP,
         "levels": LEVELS,
     }
+    if rules_source != dataset.RULES_DATASET:  # leaves the Group B hash as it was
+        parts["general_rules_source"] = rules_source
     canonical = json.dumps(parts, ensure_ascii=False, sort_keys=True)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def dataset_template_hash(ds: dataset.Dataset) -> str:
+    if ds.group.rules_source == dataset.RULES_CASE:
+        return template_hash([], dataset.RULES_CASE)
+    return template_hash(ds.grading_policies)
+
+
 def describe(ds: dataset.Dataset) -> dict:
     """What a run config records about the prompt."""
+    if ds.group.rules_source == dataset.RULES_CASE:
+        rule_sets = {json.dumps(ds.general_rules(c), ensure_ascii=False) for c in ds.cases}
+        return {"template_version": TEMPLATE_VERSION, "template_sha256": dataset_template_hash(ds),
+                "layout_verified": LAYOUT_VERIFIED, "general_rules_source": dataset.RULES_CASE,
+                "general_rules_distinct_sets": len(rule_sets)}
     return {"template_version": TEMPLATE_VERSION, "template_sha256": template_hash(ds.grading_policies),
-            "layout_verified": LAYOUT_VERIFIED, "general_rules_source": "dataset grading_policies",
+            "layout_verified": LAYOUT_VERIFIED, "general_rules_source": dataset.RULES_DATASET,
             "general_rules_count": len(ds.grading_policies)}
 
 
@@ -208,13 +250,17 @@ def build_prompts(ds: dataset.Dataset) -> list[dict]:
 if __name__ == "__main__":
     import sys
 
-    ds = dataset.load()
-    wanted = sys.argv[1:] or [ds.cases[0]["test_id"]]
+    wanted = sys.argv[1:]
+    groups = {"A" if t.startswith("csc236_A_") else "B" for t in wanted} or {"B"}
+    if len(groups) != 1:
+        sys.exit("give test_ids of one group at a time")
+    ds = dataset.load_group(groups.pop())
+    wanted = wanted or [ds.cases[0]["test_id"]]
     cases = ds.by_id()
     for tid in wanted:
         if tid not in cases:
             sys.exit(f"unknown test_id {tid}")
         for m in messages_for_case(ds, cases[tid]):
             print(f"===== {m['role']} =====\n{m['content']}")
-    print(f"===== template {TEMPLATE_VERSION} sha256 {template_hash(ds.grading_policies)} "
+    print(f"===== template {TEMPLATE_VERSION} sha256 {dataset_template_hash(ds)} "
           f"(layout verified: {LAYOUT_VERIFIED})")

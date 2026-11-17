@@ -97,9 +97,10 @@ names = opt("--served-model-name") + [m.split("=", 1)[0] for m in opt("--lora-mo
 
 from eval import dataset, prompt
 from eval.tests.fixtures import render_grade
-ds = dataset.load()
-cases = ds.by_id()
-by_hash = {r["prompt_sha256"]: r["test_id"] for r in prompt.build_prompts(ds)}
+cases, by_hash = {}, {}
+for ds in (dataset.load_group("B"), dataset.load_group("A")):
+    cases.update(ds.by_id())
+    by_hash.update({r["prompt_sha256"]: r["test_id"] for r in prompt.build_prompts(ds)})
 model_lists = []
 
 
@@ -233,10 +234,20 @@ class PreflightTest(unittest.TestCase):
         mock.patch.stopall()
         self._tmp.cleanup()
 
-    def check(self, adapter="default", out=None, run_args=(), base=None, repo=REPO, cluster=None):
+    def check(self, adapter="default", out=None, run_args=(), base=None, repo=REPO, cluster=None, group="B"):
         c = cluster or self.cluster
         adapter = str(c.adapter) if adapter == "default" else adapter
-        return preflight.check(repo, str(base or c.model), adapter, str(out or c.out), list(run_args))
+        return preflight.check(repo, str(base or c.model), adapter, str(out or c.out), list(run_args), group=group)
+
+    def test_group_a_and_b(self):
+        problems, info, _ = self.check()
+        self.assertEqual((problems, info["DATASET_GROUP"], info["DATASET_SHA256"]), ([], "B", dataset.EXPECTED_SHA256))
+        problems, info, _ = self.check(group="A", run_args=["--topic", "regex"])
+        self.assertEqual((problems, info["DATASET_GROUP"], info["DATASET_SHA256"]), ([], "A", dataset.GROUP_A_SHA256))
+        # Filters are checked against the chosen test set: Group B has no "regex" topic.
+        self.assertTrue(any("unknown topic" in p for p in self.check(group="B", run_args=["--topic", "regex"])[0]))
+        self.assertTrue(any("unknown test-set group 'C'" in p for p in self.check(group="C")[0]))
+        self.assertTrue(any("sets --group itself" in p for p in self.check(run_args=["--group", "A"])[0]))
 
     def test_good_setups(self):
         problems, info, warnings = self.check()
@@ -433,6 +444,30 @@ class JobScriptTest(unittest.TestCase):
         self.assertFalse(c.vllm_alive(), "vLLM was left running")
         self.assertIn("provisional", r.stdout)
         self.assertIn("human-reviewed, but not independently TA-verified or frozen", r.stdout)
+
+    def test_full_job_group_a(self):
+        c = self.cluster()
+        question = dataset.load_group("A").cases[0]["question_id"]
+        r = c.run("--", "--question-id", question, "--n-boot", "20", TEST_SET="A")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("Test set: Group A", r.stdout)
+        root = c.out / "4242"
+        (base_run,) = (root / "base").iterdir()
+        (ft_run,) = (root / "fine_tuned").iterdir()
+        (cmp,) = (root / "compare").iterdir()
+        a = json.loads((base_run / "config.json").read_text())
+        b = json.loads((ft_run / "config.json").read_text())
+        for config in (a, b):
+            self.assertEqual(config["status"], "complete")
+            self.assertEqual((config["dataset"]["group"], config["dataset"]["sha256"]), ("A", dataset.GROUP_A_SHA256))
+            self.assertEqual(config["prompt"]["general_rules_source"], dataset.RULES_CASE)
+        self.assertEqual(a["prompts_file"]["sha256"], b["prompts_file"]["sha256"])
+        metrics = json.loads((base_run / "metrics.json").read_text())
+        # The fake server grades with the labels.
+        self.assertEqual(metrics["criterion"]["strict_exact_agreement"]["value"], 1.0)
+        self.assertIn("Group A labels", (cmp / "compare.md").read_text())
+        self.assertIn("Group A labels are teacher-model generated", r.stdout)
+        self.assertFalse(c.vllm_alive())
 
     def test_base_only_without_adapter(self):
         c = self.cluster(adapter=False)

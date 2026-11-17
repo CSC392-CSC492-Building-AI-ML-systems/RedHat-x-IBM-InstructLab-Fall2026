@@ -1,9 +1,10 @@
 """Checks for eval/jobs/run_eval.sh that need no GPU, run before any model is loaded.
 
-    python -m eval.jobs.preflight --base-model models/Qwen3.8-27B [--adapter DIR] --out DIR [-- RUN ARGS]
+    python -m eval.jobs.preflight --base-model models/Qwen3.8-27B [--adapter DIR] --out DIR [--group A|B] \
+        [-- RUN ARGS]
 
 Checks:
-- the repo and the test set (by hash);
+- the repo and the test set of the chosen group (B by default): its file, hash, group and structure;
 - the Python packages the evaluation needs;
 - the vllm and curl commands;
 - the base model folder;
@@ -123,7 +124,8 @@ def check_adapter(adapter: Path, base_model: str, base_resolved: Path, repo: Pat
     return problems, info, warnings
 
 
-def check(repo: Path, base_model: str, adapter: str | None, out: str, run_args: list[str]) -> tuple[list[str], dict, list[str]]:
+def check(repo: Path, base_model: str, adapter: str | None, out: str, run_args: list[str],
+          group: str = "B") -> tuple[list[str], dict, list[str]]:
     problems, warnings = [], []
     info = {"REPO": str(repo), "BASE_MODEL_RECORD": base_model, "BASE_NAME": backends.SERVED_MODELS["base"],
             "FT_NAME": backends.SERVED_MODELS["fine_tuned"], "MODE": "base_and_fine_tuned" if adapter else "base_only"}
@@ -131,11 +133,16 @@ def check(repo: Path, base_model: str, adapter: str | None, out: str, run_args: 
     if not (repo / "eval" / "run_eval.py").exists():
         problems.append(f"{repo} is not the repo folder (no eval/run_eval.py); submit the job from the repo folder")
     ds = None
-    try:
-        ds = dataset.load()
-        info["DATASET_SHA256"] = ds.sha256
-    except dataset.DatasetError as exc:
-        problems.append(str(exc))
+    if group not in dataset.GROUPS:
+        problems.append(f"unknown test-set group {group!r}; choose from {sorted(dataset.GROUPS)}")
+    else:
+        try:
+            ds = dataset.load_group(group)
+            info["DATASET_GROUP"] = group
+            info["DATASET_SHA256"] = ds.sha256
+            problems += [f"test set: {p}" for p in dataset.check_structure(ds)]
+        except (dataset.DatasetError, OSError) as exc:
+            problems.append(str(exc))
     for name in PACKAGES:
         if importlib.util.find_spec(name) is None:
             problems.append(f"Python package {name!r} is missing from this environment (env/model has it)")
@@ -176,10 +183,11 @@ def main(argv=None) -> int:
     p.add_argument("--base-model", required=True)
     p.add_argument("--adapter", default="")
     p.add_argument("--out", required=True)
+    p.add_argument("--group", default="B", help="test set: B (default) or A")
     p.add_argument("run_args", nargs="*", help="run_eval.py options for both runs (after --)")
     args = p.parse_args(argv)
     problems, info, warnings = check(Path(args.repo).resolve(), args.base_model, args.adapter or None, args.out,
-                                     args.run_args)
+                                     args.run_args, group=args.group)
     for w in warnings:
         print(f"Note: {w}", file=sys.stderr)
     if problems:

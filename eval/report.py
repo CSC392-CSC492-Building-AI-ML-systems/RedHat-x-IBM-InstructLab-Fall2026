@@ -5,6 +5,9 @@ from __future__ import annotations
 PROVISIONAL = ("> **PROVISIONAL LABELS.** Scored against the Group B AI-drafted labels (draft v3), human-reviewed; "
                "provisional and not independently TA-verified or frozen. These are not answer-key results and must "
                "not be reported as such.")
+PROVISIONAL_A = ("> **PROVISIONAL LABELS.** Scored against the Group A labels (final v1): teacher-model generated, "
+                 "checked in an AI-assisted mathematical audit, with human decisions on 4 cases; not independently "
+                 "human-verified or frozen. These are not answer-key results and must not be reported as such.")
 LAYOUT_UNVERIFIED = ("> **Prompt layout unverified.** The student-answer layout of the evaluation prompt has not "
                      "yet been checked against real training data on Fir (eval/PROMPT.md).")
 
@@ -32,8 +35,13 @@ def table(header: list[str], rows: list[list]) -> list[str]:
     return lines + [""]
 
 
+def provisional_banner(config_dataset: dict) -> str:
+    """The labels banner for a run config's `dataset` entry (no `group` key means Group B)."""
+    return PROVISIONAL_A if config_dataset.get("group") == "A" else PROVISIONAL
+
+
 def banners(config: dict) -> list[str]:
-    out = [PROVISIONAL, ""]
+    out = [provisional_banner(config["dataset"]), ""]
     if not config["prompt"]["layout_verified"]:
         out += [LAYOUT_UNVERIFIED, ""]
     if config.get("status") != "complete":
@@ -52,7 +60,8 @@ def run_info(config: dict) -> list[str]:
         ["Adapter", adapter.get("path")],
         ["Backend", config["backend"]["backend"]],
         ["Decoding", ", ".join(f"{k}={v}" for k, v in config["decoding"].items())],
-        ["Dataset", f"{ds['version']}, sha256 `{ds['sha256'][:12]}…`"],
+        ["Dataset", f"{'Group ' + ds['group'] + ', ' if 'group' in ds else ''}{ds['version']}, "
+                    f"sha256 `{ds['sha256'][:12]}…`"],
         ["Prompt template", f"{pr['template_version']}, sha256 `{pr['template_sha256'][:12]}…`"],
         ["Prompts file", f"sha256 `{config['prompts_file']['sha256'][:12]}…`"],
         ["Cases", config["selection_headline"]],

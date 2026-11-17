@@ -46,7 +46,10 @@ Student Answer:
 <student_answer, verbatim>
 ```
 
-From each test case, only `question`, `rubric` and `student_answer` are used. `prompt.build_messages` rejects any other field. The general rules are the same four for every case.
+From each test case, only `question`, `rubric` and `student_answer` are used. `prompt.build_messages` rejects any other field. The general rules depend on the test set:
+
+- **Group B:** the dataset's four `grading_policies`, the same for every case (shown above).
+- **Group A:** the case's own `general_rules`, the question-specific rules of the training seed it comes from. Group A lists `general_rules` among its grader-visible fields and has no `grading_policies`. For all 40 cases, the context (instruction, question, rubric, rules) is byte for byte the training example's context (`source.prompt_context_sha256`; tested in `eval/tests/test_group_a.py`). Differences 1 and 2 below therefore do not apply to Group A.
 
 The student answer is passed through unchanged. Some answers contain errors, prompt-injection text or fake grades on purpose, and cleaning them would defeat those tests. The answer comes after the grading instructions, under its own `Student Answer:` heading (Ethics §4 mitigation).
 
@@ -54,6 +57,7 @@ To print the exact prompt for a case:
 
 ```bash
 python3 -m eval.prompt csc236_B_cind_01_ans01
+python3 -m eval.prompt csc236_A_regex_04_a06     # Group A, from the test_id
 ```
 
 The rendered prompts are not copied into this file, so that test-set text doesn't spread to more places in the repo.
@@ -80,7 +84,7 @@ These differences are deliberate:
 - `template_hash` covers everything about the prompt except the case itself:
   - the template version;
   - the system message and instruction;
-  - the general rules;
+  - the general rules (Group B). For Group A the rules are part of each case, like its rubric: the template hash records only that rules come from the case (`general_rules_source`), and the dataset and prompts-file hashes cover the rules themselves;
   - `ANSWER_LAYOUT` and `LAYOUT_VERIFIED`;
   - the rendering code.
 - Each case's messages also get their own hash (`prompt_sha256`).
@@ -94,9 +98,10 @@ These differences are deliberate:
 
 Before a prompt is used, `check_no_leak` checks that no held-out text appears in it:
 
-- `test_id`, `question_id`, `subtopic`, `parent_test_id`, `paraphrase_group`, `label_source`, `provenance`;
-- the short question name the dataset's notes use (e.g. `nfa_16` for `csc236_B_nfa_16`);
-- every draft justification.
+- `test_id`, `question_id`, `subtopic`, `parent_test_id`, `paraphrase_group`, `label_source`, `provenance`, `seed_id`;
+- the short question name the dataset's notes use (e.g. `nfa_16` for `csc236_B_nfa_16`, `regex_04` for `csc236_A_regex_04`);
+- every draft justification;
+- every text of 20 or more characters anywhere in a held-out field: for Group A this covers the generated reply (`final_response_markdown`, `original_generated_label`), the correction history, human decisions, audit notes, generation metadata and source records.
 
 Text that is also in the visible fields or the rules is allowed, because it reveals nothing. Six short draft justifications, such as "No correctness argument.", are word for word rubric expectations.
 
@@ -104,6 +109,8 @@ Text that is also in the visible fields or the rules is allowed, because it reve
 
 - **Layout check (before any real run):** compare `ANSWER_LAYOUT` with one real `skills_train_msgs` line on Fir. If it differs, change `ANSWER_LAYOUT`, its test and table row 3 above, and give the template a new version. Then set `LAYOUT_VERIFIED = True`. Either change alters `template_hash`.
 ## Change log
+
+- **2026-11-17: Group A support.** `--group A` (job: `TEST_SET=A`) evaluates `test_set/groupA_40_final.json` (SHA-256 `226fb91602ed06d3192b495a4ab2085553e3ee41fa1745c3337de4f0dcab81cc`) with each case's own `general_rules`. Group B prompts, `template_hash` and run configs are unchanged byte for byte (pinned in `eval/tests/test_group_a.py`). The leak guard now also checks every text of 20 or more characters in held-out fields; no Group B prompt is affected.
 
 - **2026-11-05: Group B dataset updated.** The dataset is now identified by SHA-256 `ecd69def58cf75b87032ef96419767e008e7481150170839411b47e8f1011cbc`. The file name and `version` field did not change, and no score or level changed. The template is still `eval-prompt-v3`, with the same `template_hash`.
   - **Q08 C2 rubric clarification.** In all three `csc236_B_struct_08` cases, `minimal` now covers an attempted concrete length calculation that is incorrect or doesn't use the induction hypothesis to justify the required form. `none` now covers giving no concrete calculation or relation for either recursive constructor. Rubric text is part of the prompt, so the prompts for these three cases changed, and runs made before this change can't be compared with later runs.
