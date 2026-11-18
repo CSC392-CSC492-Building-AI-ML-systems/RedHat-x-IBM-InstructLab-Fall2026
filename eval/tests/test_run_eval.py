@@ -96,6 +96,19 @@ class RunEvalTest(MiniDatasetTest):
                 self.assertEqual(client.calls, [])
                 self.assertIn(fragment, err.getvalue())
 
+    def test_empty_selection_refused_before_anything(self):
+        client = FakeServer(self.ds)
+        out = self.tmp / "empty"
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+            code = run_eval.main(["--model", "base", *self.dataset_args, "--out", str(out),
+                                  "--endpoint", "http://fake:8000/v1", "--test-type", "fairness",
+                                  "--topic", "induction_b"], client=client)
+        self.assertEqual(code, 1)
+        self.assertFalse(out.exists())  # nothing created
+        self.assertEqual(client.calls, [])
+        self.assertIn("no test cases selected", err.getvalue())
+
     def test_output_folder_rules(self):
         # Inside the repo or the test set, directly or through a symlink: refused, and nothing is created.
         link = self.tmp / "link_to_repo"

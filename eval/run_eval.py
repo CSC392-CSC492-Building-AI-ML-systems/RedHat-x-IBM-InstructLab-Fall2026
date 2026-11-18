@@ -262,6 +262,7 @@ def write_results(run_dir: Path, config: dict, ds, selection, raw, n_boot, seed)
 def run(args, client=None) -> tuple[Path, int]:
     ds = load_dataset(args.group, args.dataset, args.expected_sha256)
     selection = dataset.select(ds, test_types=args.test_type, topics=args.topic, question_ids=args.question_id)
+    dataset.require_selected(ds, selection)  # before the server is contacted or anything is created
     backend, decoding = make_backend(args, client)
     served_model = backend.served_model
     # Before anything is created or sent.

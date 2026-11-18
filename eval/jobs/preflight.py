@@ -62,10 +62,15 @@ def check_run_args(args: list[str], ds) -> list[str]:
     except SystemExit:
         return [f"run_eval.py does not accept these options: {' '.join(args)}"]
     try:
-        dataset.select(ds, test_types=parsed.test_type, topics=parsed.topic, question_ids=parsed.question_id)
+        selection = dataset.select(ds, test_types=parsed.test_type, topics=parsed.topic,
+                                   question_ids=parsed.question_id)
+        dataset.require_selected(ds, selection)
+    except dataset.DatasetError as exc:
+        problems.append(str(exc))
+    try:
         backends.Decoding(temperature=parsed.temperature, top_p=parsed.top_p, max_tokens=parsed.max_tokens,
                           seed=parsed.seed)
-    except (dataset.DatasetError, backends.BackendError) as exc:
+    except backends.BackendError as exc:
         problems.append(str(exc))
     return problems
 

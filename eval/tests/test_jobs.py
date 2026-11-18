@@ -338,6 +338,44 @@ class PreflightTest(unittest.TestCase):
                 problems = self.check(run_args=args)[0]
                 self.assertTrue(any(fragment in p for p in problems), problems)
 
+    def test_empty_selection_refused(self):
+        # Every filter value exists in the chosen test set, but together they match no case.
+        for group, args, fragments in (
+                ("A", ["--test-type", "paraphrase"],
+                 ["the filter --test-type paraphrase matches none of the 40 cases", "Group A test set",
+                  "test_set/groupA_40_final.json", dataset.GROUP_A_SHA256[:12], "--test-type paraphrase: 0"]),
+                ("A", ["--test-type", "fairness", "--topic", "regex"],
+                 ["--test-type fairness and --topic regex together match none", "--topic regex: 5"]),
+                ("B", ["--test-type", "robustness", "--topic", "regular_languages"],
+                 ["--test-type robustness and --topic regular_languages together match none of the 60 cases",
+                  "Group B test set", "test_set/groupB_60_draft.json", dataset.EXPECTED_SHA256[:12],
+                  "--test-type robustness: 5", "--topic regular_languages: 6"])):
+            with self.subTest(group=group, args=args):
+                problems = self.check(group=group, run_args=args)[0]
+                empty = [p for p in problems if "no test cases selected" in p]
+                self.assertEqual(len(empty), 1, problems)
+                for fragment in fragments:
+                    self.assertIn(fragment, empty[0])
+
+        # Reported together with any other option problem.
+        problems = self.check(group="A", run_args=["--test-type", "paraphrase", "--max-tokens", "0"])[0]
+        self.assertTrue(any("no test cases selected" in p for p in problems), problems)
+        self.assertTrue(any("max_tokens" in p for p in problems), problems)
+
+        # Selections with at least one case still pass, for both test sets.
+        for group, args in (("A", []), ("A", ["--topic", "regex"]), ("A", ["--test-type", "original"]),
+                            ("B", []), ("B", ["--test-type", "robustness"]),
+                            ("B", ["--test-type", "paraphrase", "--topic", "simple_induction"])):
+            with self.subTest(group=group, args=args):
+                self.assertEqual(self.check(group=group, run_args=args)[0], [])
+
+        with mock.patch("sys.stdout") as out, mock.patch("sys.stderr") as err:
+            code = preflight.main(["--base-model", str(self.cluster.model), "--out", str(self.cluster.out),
+                                   "--group", "A", "--", "--test-type", "paraphrase"])
+        self.assertEqual(code, 1)
+        self.assertEqual(out.write.call_args_list, [])  # no shell assignments for the job to use
+        self.assertIn("no test cases selected", "".join(c.args[0] for c in err.write.call_args_list))
+
     def test_output_is_safe_for_the_shell(self):
         weird = self.cluster.root / "out dir; rm -rf ~"
         with mock.patch("sys.stdout") as out, mock.patch("sys.stderr"):

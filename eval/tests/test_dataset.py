@@ -155,6 +155,26 @@ class SelectionTest(MiniDatasetTest):
         ids = [i.test_id for i in s.items]
         self.assertEqual(len(ids), len(set(ids)))
 
+    def test_empty_selection_rejected(self):
+        # Each value exists, but no fairness case is about induction_b.
+        s = dataset.select(self.ds, test_types=["fairness"], topics=["induction_b"])
+        self.assertEqual((s.selected_ids, s.context_parent_ids), ([], []))
+        with self.assertRaises(dataset.DatasetError) as caught:
+            dataset.require_selected(self.ds, s)
+        message = str(caught.exception)
+        for fragment in ("no test cases selected", "--test-type fairness and --topic induction_b together",
+                         f"none of the {MINI_SIZE['cases']} cases", "Group B test set", str(self.ds.path),
+                         self.ds.sha256[:12], "--test-type fairness: 2", "--topic induction_b: 4"):
+            self.assertIn(fragment, message)
+
+        # Any selection with at least one selected case passes, unchanged.
+        for kwargs in ({}, {"test_types": ["fairness"]}, {"test_types": ["sensitivity"], "topics": ["induction_a"]},
+                       {"question_ids": [mid("alpha_01")]}):
+            with self.subTest(**kwargs):
+                s = dataset.select(self.ds, **kwargs)
+                self.assertIsNone(dataset.require_selected(self.ds, s))
+                self.assertGreater(len(s.selected_ids), 0)
+
     def test_unknown_filter_value_rejected(self):
         for kwargs in ({"test_types": ["paraphrases"]}, {"topics": ["no_such_topic"]},
                        {"question_ids": [mid("nope_99")]}):

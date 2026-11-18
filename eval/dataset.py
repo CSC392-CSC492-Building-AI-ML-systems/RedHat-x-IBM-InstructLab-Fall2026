@@ -437,3 +437,28 @@ def select(ds: Dataset, test_types=None, topics=None, question_ids=None) -> Sele
                   for c in cases if c["test_id"] in chosen or c["test_id"] in parents)
     filters = {"test_type": test_types, "topic": topics, "question_id": question_ids}
     return Selection(items=items, filters=filters)
+
+
+def require_selected(ds: Dataset, selection: Selection) -> None:
+    """Raise DatasetError if the filters chose no case, naming the test set, its group and the filters.
+
+    Every filter value can exist in the test set while their combination matches nothing (e.g.
+    --test-type paraphrase on Group A, which has only originals), and a run with no cases has nothing
+    to evaluate.
+    """
+    if selection.selected_ids:
+        return
+    try:
+        shown = ds.path.resolve().relative_to(REPO)
+    except ValueError:
+        shown = ds.path
+    given = {k: v for k, v in selection.filters.items() if v}
+    flags = [f"--{k.replace('_', '-')} {','.join(v)}" for k, v in given.items()]
+    alone = [f"{flag}: {sum(c[k] in v for c in ds.cases)}" for flag, (k, v) in zip(flags, given.items())]
+    what = (f"the filters {' and '.join(flags)} together match" if len(flags) > 1
+            else f"the filter {flags[0]} matches" if flags else "the test set has")
+    raise DatasetError(
+        f"no test cases selected: {what} none of the {len(ds.cases)} cases in the Group {ds.group.name} test set "
+        f"{shown} (SHA-256 {ds.sha256[:12]}…)"
+        + (f". Cases each filter matches on its own: {'; '.join(alone)}" if flags else "")
+        + ". Change or remove the filters.")
