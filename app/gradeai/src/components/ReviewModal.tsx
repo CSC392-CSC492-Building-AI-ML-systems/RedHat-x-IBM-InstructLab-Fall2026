@@ -239,7 +239,7 @@ export default function ReviewModal({ id, onClose }: { id: string | null; onClos
               <pre className="submission text-[11px] leading-relaxed whitespace-pre-wrap break-words rounded p-4 max-h-[420px] overflow-auto" style={{ background: 'var(--secondary)', color: 'var(--foreground)' }}>{content}</pre>
             ) : (
               <div className="text-xs leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
-                {sub.queueState === 'ocr' ? 'The server is still reading this scan.' : 'No readable text was found in this file. Download the original to look at it.'}
+                {sub.queueState === 'ocr' ? 'GradeAI is still reading this scan.' : 'No readable text was found in this file. Download the original to look at it.'}
               </div>
             )}
           </div>

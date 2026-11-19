@@ -44,7 +44,7 @@ export default function ModelBadge({ detailed = false, compact = false }: { deta
           {queue
             ? `${model.grading} grading · ${model.waiting} waiting`
             : 'Queue empty'}
-          {!model.online && <><br />Files wait here and grade automatically when the Fir job starts.</>}
+          {!model.online && <><br />Files wait here and grade automatically when the Fir model connects (npm run model:connect).</>}
         </div>
       )}
     </div>

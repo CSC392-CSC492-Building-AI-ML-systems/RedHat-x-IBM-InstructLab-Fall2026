@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-"""GradeAI worker for Fir.
+"""GradeAI worker.
 
-Runs inside the GPU job next to vLLM. It pulls grading tasks from your GradeAI
-server over HTTPS, runs them on the fine-tuned model served by vLLM on this
-node, and posts the results back. Fir only makes outgoing connections, so no
-port forwarding or open ports are needed.
+Runs on your computer next to GradeAI. `npm run model:connect` starts it after opening an SSH
+tunnel to the model job on Fir. It takes queued files from GradeAI, has the fine-tuned model
+grade them through the tunnel, and sends the grades back.
 
 Standard library only: no pip installs.
 
-Environment (normally set in ~/gradeai/gradeai.env):
-  GRADEAI_URL            https://gradeai.your-domain.ca
-  GRADEAI_WORKER_TOKEN   same value as WORKER_TOKEN on the web server
-  VLLM_URL               http://127.0.0.1:<port>/v1  (set by the job script)
-  VLLM_API_KEY           key the job script gave vLLM
-  MODEL_NAME             --served-model-name given to vLLM
-  WORKER_CONCURRENCY     parallel requests to vLLM (default 8)
+Environment (npm run model:connect sets these; extra settings can go in .env):
+  GRADEAI_URL            http://127.0.0.1:8080
+  GRADEAI_WORKER_TOKEN   WORKER_TOKEN from .env
+  VLLM_URL               http://127.0.0.1:<tunnel port>/v1
+  VLLM_API_KEY           key of the current model job
+  MODEL_NAME             name the model job serves
+  FIR_JOB_ID, FIR_NODE, FIR_JOB_END   the Fir job (end as Unix seconds), shown in GradeAI
+  WORKER_CONCURRENCY     files graded at once (default 8)
   JSON_MODE              json_schema | guided_json | none  (default json_schema)
   ENABLE_THINKING        true to let Qwen3-family models reason before answering (default false)
-  STOP_BEFORE_END_SEC    stop taking new work this long before the job ends (default 600)
+  STOP_BEFORE_END_SEC    stop taking new files this long before the job ends (default 600)
 """
 
 import json
@@ -44,8 +44,8 @@ JSON_MODE = os.environ.get("JSON_MODE", "json_schema")
 STOP_BEFORE_END = int(os.environ.get("STOP_BEFORE_END_SEC", "600"))
 # Qwen3-family models "think" before answering unless told not to. Grading wants the JSON answer only.
 ENABLE_THINKING = os.environ.get("ENABLE_THINKING", "false").lower() in ("1", "true", "yes")
-JOB_ID = os.environ.get("SLURM_JOB_ID")
-NODE = socket.gethostname()
+JOB_ID = os.environ.get("FIR_JOB_ID") or os.environ.get("SLURM_JOB_ID")
+NODE = os.environ.get("FIR_NODE") or socket.gethostname()
 
 stopping = threading.Event()
 model_up = threading.Event()  # cleared when vLLM can't be reached (crashed, or an SSH tunnel dropped)
@@ -74,11 +74,12 @@ def server(path, body):
 
 
 def job_end_epoch_ms():
-    """When Slurm will end this job, so the server can show it and we can stop in time."""
-    v = os.environ.get("SLURM_JOB_END_TIME")
-    if v and v.isdigit():
-        return int(v) * 1000
-    if not JOB_ID:
+    """When the Fir job ends, so GradeAI can show it and we stop taking files in time."""
+    for name in ("FIR_JOB_END", "SLURM_JOB_END_TIME"):
+        v = os.environ.get(name, "")
+        if v.isdigit():
+            return int(v) * 1000
+    if not os.environ.get("SLURM_JOB_ID"):
         return None
     try:
         out = subprocess.run(["squeue", "-h", "-j", JOB_ID, "-o", "%e"], capture_output=True, text=True, timeout=20).stdout.strip()
@@ -95,13 +96,13 @@ def status_body():
 
 
 def wait_for_vllm(limit_sec=1800):
-    log(f"waiting for vLLM at {VLLM} …")
+    log("waiting for the model to finish loading on Fir (a few minutes after the job starts)…")
     t0 = time.time()
     while time.time() - t0 < limit_sec and not stopping.is_set():
         try:
             r = http_json("GET", f"{VLLM}/models", headers={"Authorization": f"Bearer {VLLM_KEY}"} if VLLM_KEY else None, timeout=10)
             names = [m.get("id") for m in r.get("data", [])]
-            log("vLLM is up, serving:", ", ".join(names))
+            log("model is up:", ", ".join(names))
             return True
         except Exception:
             time.sleep(5)
@@ -209,15 +210,15 @@ def main():
     signal.signal(signal.SIGINT, lambda *_: stopping.set())
     log(f"GradeAI worker {VERSION} · job {JOB_ID} on {NODE} · model {MODEL} · server {SERVER}")
     if not wait_for_vllm():
-        log("vLLM did not start; check the vllm-*.log file")
+        log("the model did not answer within 30 minutes; check it with: npm run model:log")
         sys.exit(1)
     try:
         server("heartbeat", status_body())
     except urllib.error.HTTPError as e:
-        log(f"server refused the worker (HTTP {e.code}). Check GRADEAI_WORKER_TOKEN matches WORKER_TOKEN on the server.")
+        log(f"GradeAI refused the worker (HTTP {e.code}). Restart GradeAI (npm start) after running npm run setup, so both use the same WORKER_TOKEN.")
         sys.exit(1)
     except Exception as e:
-        log(f"cannot reach {SERVER}: {e}")
+        log(f"cannot reach GradeAI at {SERVER} ({e}). Is it running? Start it with: npm start")
         sys.exit(1)
     model_up.set()
     threading.Thread(target=heartbeat_loop, daemon=True).start()
@@ -226,7 +227,7 @@ def main():
     with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
         while not stopping.is_set():
             if near_end():
-                log("job is about to end: no new work")
+                log("the Fir job is about to end: no new files")
                 break
             if not model_up.is_set():
                 # Stop taking work (GradeAI shows the model offline) until vLLM answers again.

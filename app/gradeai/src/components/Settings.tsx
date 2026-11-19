@@ -144,7 +144,7 @@ export default function Settings() {
           <Section title="AI Grading Model">
             <ModelBadge detailed />
             <div className="text-[11px] leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
-              Your fine-tuned model runs in a GPU job on Fir. Start it with <span className="mono">sbatch ~/gradeai/gradeai-model.sbatch</span>; while no job is running, uploads wait in the queue.
+              Your fine-tuned model runs in a GPU job on Fir. Run <span className="mono">npm run model:connect</span> on this computer to start it and connect; until then, uploads wait in the queue.
             </div>
             <div>
               <label htmlFor="s-system" className="mono text-[10px] uppercase tracking-widest block mb-1" style={{ color: 'var(--muted-foreground)' }}>System prompt sent with every request</label>
@@ -156,7 +156,7 @@ export default function Settings() {
               <div className="text-[11px] mt-1 leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>Longer files are cut and flagged for review. Keep this near 3 × the job's MAX_MODEL_LEN.</div>
             </div>
             <div className="text-[11px]" style={{ color: ocr.tesseract ? 'var(--muted-foreground)' : '#b45309' }}>
-              {ocr.tesseract ? 'Scanned and photographed work is read on this server with Tesseract OCR.' : 'Tesseract OCR is not installed on the server, so scanned submissions will fail. Install tesseract-ocr and poppler-utils.'}
+              {ocr.tesseract ? 'Scanned and photographed work is read on this computer with Tesseract OCR.' : 'Tesseract OCR is not installed on this computer, so scanned submissions will fail. On a Mac: brew install tesseract poppler'}
             </div>
           </Section>
 

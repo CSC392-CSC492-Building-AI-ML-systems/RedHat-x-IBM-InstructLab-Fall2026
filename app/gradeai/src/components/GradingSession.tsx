@@ -80,7 +80,7 @@ export default function GradingSession({ setActiveView }: { setActiveView: (v: V
       })
       if (next.length < prepared.length) notify(`${prepared.length - next.length} duplicate file(s) skipped.`, 'warn')
       const scans = next.filter(f => (f.kind === 'scan' || f.kind === 'image') && !f.error).length
-      if (scans && !ocr.tesseract) notify(`${scans} scanned file(s) need OCR, which isn't installed on the server. They will fail until an admin installs Tesseract.`, 'warn')
+      if (scans && !ocr.tesseract) notify(`${scans} scanned file(s) need OCR, which isn't installed on this computer. They will fail until you run: brew install tesseract poppler`, 'warn')
       setStaged(list => [...list, ...next])
     } finally {
       setReading(false)
@@ -107,7 +107,7 @@ export default function GradingSession({ setActiveView }: { setActiveView: (v: V
       setStaged(list => list.filter(s => s.error))
       notify(model.online
         ? `${ids.length} file${ids.length === 1 ? '' : 's'} queued — the model is grading now.`
-        : `${ids.length} file${ids.length === 1 ? '' : 's'} queued. They'll be graded when the Fir model comes online.`)
+        : `${ids.length} file${ids.length === 1 ? '' : 's'} queued. They'll be graded when the Fir model connects.`)
     } catch (e) {
       notify(e instanceof ApiError ? e.message : 'Upload failed. Check your connection and try again.', 'error')
     } finally {
@@ -169,7 +169,7 @@ export default function GradingSession({ setActiveView }: { setActiveView: (v: V
 
       {!model.online && pendingRows.length > 0 && (
         <Notice className="mb-6">
-          The grading model is offline, so {pendingRows.length} file{pendingRows.length === 1 ? ' is' : 's are'} waiting. Grading starts on its own when the Fir job comes online — you can close this page.
+          The grading model is offline, so {pendingRows.length} file{pendingRows.length === 1 ? ' is' : 's are'} waiting. Grading starts on its own when the Fir model connects (npm run model:connect). Keep GradeAI running; you can close this page.
         </Notice>
       )}
 

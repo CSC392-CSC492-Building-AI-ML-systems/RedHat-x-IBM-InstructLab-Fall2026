@@ -1,9 +1,10 @@
 """A stand-in for vLLM so you can try GradeAI without Fir. It returns made-up grades.
 
-    python3 scripts/mock-model.py 8001 local-key
-    GRADEAI_URL=http://localhost:8080 GRADEAI_WORKER_TOKEN=<WORKER_TOKEN> \
+    npm run mock-model          # terminal 1 (python3 scripts/mock-model.py 8001 local-key)
+    set -a; source .env; set +a
+    GRADEAI_URL=http://127.0.0.1:8080 GRADEAI_WORKER_TOKEN=$WORKER_TOKEN \
       VLLM_URL=http://127.0.0.1:8001/v1 VLLM_API_KEY=local-key MODEL_NAME=mock \
-      python3 deploy/fir/gradeai_worker.py
+      python3 scripts/gradeai_worker.py
 """
 import json, re, sys, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer

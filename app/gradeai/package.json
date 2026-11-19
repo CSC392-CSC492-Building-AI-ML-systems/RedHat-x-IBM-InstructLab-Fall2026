@@ -10,7 +10,14 @@
     "build:web": "vite build",
     "build:server": "esbuild server/index.ts --bundle --platform=node --format=esm --target=node22 --packages=external --outfile=dist-server/index.mjs",
     "build": "npm run typecheck && npm run build:web && npm run build:server",
-    "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env dist-server/index.mjs"
+    "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env dist-server/index.mjs",
+    "setup": "node scripts/setup.mjs",
+    "model:connect": "bash scripts/fir.sh connect",
+    "model:start": "bash scripts/fir.sh start",
+    "model:status": "bash scripts/fir.sh status",
+    "model:log": "bash scripts/fir.sh log",
+    "model:stop": "bash scripts/fir.sh stop",
+    "mock-model": "python3 scripts/mock-model.py 8001 local-key"
   },
   "dependencies": {
     "@fontsource/dm-mono": "^5.2.5",
@@ -38,5 +45,5 @@
   "engines": {
     "node": ">=22.13"
   },
-  "description": "GradeAI — AI-assisted grading for CSC236, using a fine-tuned model served on Fir."
+  "description": "GradeAI: AI-assisted grading for CSC236, run on your computer with a fine-tuned model served on Fir."
 }

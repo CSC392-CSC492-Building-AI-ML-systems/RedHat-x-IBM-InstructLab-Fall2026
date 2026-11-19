@@ -209,7 +209,7 @@ export default function Submissions({ focusId, clearFocus }: { focusId: string |
                   <div className="mono text-[10px] mt-0.5" style={{ color: 'var(--muted-foreground)' }}>Uploaded {longDate(selected.submittedAt)} · {selected.rubricName}{selected.model ? ` · graded by ${selected.model}` : ''}</div>
                   {selected.status === 'pending' && (
                     <div className="mono text-[10px] mt-1" style={{ color: 'var(--primary)' }}>
-                      {selected.queueState === 'grading' ? 'Being graded now' : selected.queueState === 'ocr' ? 'Reading the scan on the server' : model.online ? 'In the queue' : 'Waiting for the Fir model to come online'}
+                      {selected.queueState === 'grading' ? 'Being graded now' : selected.queueState === 'ocr' ? 'Reading the scan' : model.online ? 'In the queue' : 'Waiting for the Fir model to connect'}
                     </div>
                   )}
                 </div>

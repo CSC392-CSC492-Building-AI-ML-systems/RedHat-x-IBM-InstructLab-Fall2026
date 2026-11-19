@@ -126,7 +126,7 @@ export function clearFailures(key: string) { attempts.delete(key) }
 export function workerAuth(req: Request, res: Response, next: NextFunction) {
   const h = req.headers.authorization || ''
   const token = h.startsWith('Bearer ') ? h.slice(7) : ''
-  if (!config.workerToken) { res.status(503).json({ error: 'worker_disabled', message: 'Set WORKER_TOKEN on the server.' }); return }
+  if (!config.workerToken) { res.status(503).json({ error: 'worker_disabled', message: 'WORKER_TOKEN is not set. Run npm run setup, then restart GradeAI.' }); return }
   const a = Buffer.from(token)
   const b = Buffer.from(config.workerToken)
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) { res.status(401).json({ error: 'bad_token' }); return }

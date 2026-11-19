@@ -18,9 +18,9 @@ function run(cmd: string, args: string[], timeout = 120_000): Promise<string> {
 }
 
 export async function ocrFile(file: string, kind: 'scan' | 'image', maxPages = 12): Promise<string> {
-  if (!ocrTools.tesseract) throw new Error('Tesseract is not installed on the server, so scanned work cannot be read. Install tesseract-ocr (and poppler-utils for PDFs).')
+  if (!ocrTools.tesseract) throw new Error('Tesseract is not installed on this computer, so scanned work cannot be read. On a Mac: brew install tesseract poppler')
   if (kind === 'image') return (await run('tesseract', [file, 'stdout', '-l', 'eng'])).trim()
-  if (!ocrTools.pdftoppm) throw new Error('pdftoppm (poppler-utils) is not installed on the server, so scanned PDFs cannot be read.')
+  if (!ocrTools.pdftoppm) throw new Error('pdftoppm (poppler) is not installed on this computer, so scanned PDFs cannot be read. On a Mac: brew install poppler')
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gradeai-ocr-'))
   try {
     await run('pdftoppm', ['-r', '200', '-png', '-l', String(maxPages), file, path.join(dir, 'p')])

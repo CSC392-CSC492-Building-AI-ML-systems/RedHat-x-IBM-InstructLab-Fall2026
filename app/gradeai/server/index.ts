@@ -350,7 +350,7 @@ if (fs.existsSync(config.staticDir)) {
 startMaintenance()
 app.listen(config.port, config.host, () => {
   console.log(`GradeAI listening on ${config.host}:${config.port} (public URL ${config.publicUrl})`)
-  if (!config.workerToken) console.warn('WORKER_TOKEN is not set: the Fir worker cannot connect until you set it.')
+  if (!config.workerToken) console.warn('WORKER_TOKEN is not set, so the model cannot connect. Run: npm run setup')
   if (!ocrTools.tesseract) console.warn('tesseract not found: scanned submissions cannot be read.')
   if (userCount() === 0) console.log(`No accounts yet. Open ${config.publicUrl} to create the first administrator.`)
 })
