@@ -9,10 +9,10 @@ from eval import dataset
 
 
 def dataset_fingerprint():
-    """(SHA-256, mtime in ns) of each test set (Group B and Group A), to check that the tests never
-    change them."""
-    return [(dataset.sha256_file(g.default_path), os.stat(g.default_path).st_mtime_ns)
-            for g in dataset.GROUPS.values()]
+    """(SHA-256, mtime in ns) of each test set (the group defaults and the pinned files: Group B v4 and
+    v3, Group A), to check that the tests never change them."""
+    paths = list(dict.fromkeys([g.default_path for g in dataset.GROUPS.values()] + list(dataset.PINNED_SHA256)))
+    return [(dataset.sha256_file(p), os.stat(p).st_mtime_ns) for p in paths]
 
 
 def test_set_guard():

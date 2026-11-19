@@ -1,9 +1,9 @@
 """Load the test set read-only, check it, and choose the cases for a run.
 
 Two test sets are supported, told apart by their cases' `group` field:
-- Group B (test_set/groupB_60_draft.json, the default): the model sees question, rubric and
-  student_answer, and the general rules are the dataset-level `grading_policies`, the same for
-  every case.
+- Group B (the default; its default file is v4, test_set/groupB_v4_101.json, and v3 is
+  test_set/groupB_60_draft.json): the model sees question, rubric and student_answer, and the
+  general rules are the dataset-level `grading_policies`, the same for every case.
 - Group A (test_set/groupA_40_final.json): the model also sees each case's own `general_rules`,
   the question-specific rules of the training seed the question comes from. There is no
   dataset-level `grading_policies`.
@@ -11,7 +11,10 @@ Two test sets are supported, told apart by their cases' `group` field:
 The file is identified by its SHA-256 hash, not its name. The repo's test_set/groupB_60_draft.json
 holds Group B draft v3, although v2 had the same file name, and its version field did not change
 when grading_policies[1] was shortened on 2026-10-30. Loading stops if the hash is not the one
-expected.
+expected. Since 2026-11-19 the Group B default is v4 (test_set/groupB_v4_101.json, 101 cases: the 60
+v3 cases plus 41). v3 is still supported when chosen with --dataset test_set/groupB_60_draft.json;
+both hashes are pinned in PINNED_SHA256. A finished run is re-scored against the file and hash in its
+own config, whatever the default.
 
 Nothing here writes to the test set or changes its labels. check_structure only reports problems;
 it never fixes them.
@@ -31,13 +34,28 @@ from dataclasses import dataclass
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-DEFAULT_DATASET = REPO / "test_set" / "groupB_60_draft.json"
+GROUP_B_V3_DATASET = REPO / "test_set" / "groupB_60_draft.json"
 # Group B draft v3 (version "draft-v3-2026-10-29"), human-reviewed. It differs from the original v3
 # file, whose hash was ca2ef30d576f5e44f1ed321540f48dcad6e0b49d39d091d09af7396df939c423: on 2026-10-30
 # grading_policies[1] was cut back to its general principle (the rubrics already state the removed
 # parts), and in 2026-11 Q08's C2 minimal and none levels and the C1 justification of ans02 and
 # ans02_kw1 were reworded and the review metadata was updated. No score or level changed.
-EXPECTED_SHA256 = "ecd69def58cf75b87032ef96419767e008e7481150170839411b47e8f1011cbc"
+# The Group B default until 2026-11-19; choose it with --dataset (DATASET for the job).
+GROUP_B_V3_SHA256 = "ecd69def58cf75b87032ef96419767e008e7481150170839411b47e8f1011cbc"
+
+GROUP_B_V4_DATASET = REPO / "test_set" / "groupB_v4_101.json"
+# Group B v4 ("v4-2026-11-19"), 101 cases: the 60 v3 cases with questions, answers and labels unchanged,
+# plus 41 cases that are AI-drafted and AI-reviewed, not independently verified by a human; not frozen. It
+# has no review_status field (each case's label_source records how its labels were produced). The Group B
+# default since 2026-11-19.
+GROUP_B_V4_SHA256 = "24d7f3bf5d2862641871796f6b16b4e672d4c2ea97e5176bbbaf2ade082ed4ca"
+
+# The Group B default test set: v4.
+DEFAULT_DATASET = GROUP_B_V4_DATASET
+EXPECTED_SHA256 = GROUP_B_V4_SHA256
+GROUP_B_V4_LABELS_NOTE = ("Scored against Group B v4 labels: AI-drafted; the 60 cases are carried over unchanged "
+                          "from v3, and the 41 cases added in v4 are AI-reviewed, not independently verified by a "
+                          "human. Provisional, not TA-verified or frozen. Not answer-key results.")
 
 GROUP_A_DATASET = REPO / "test_set" / "groupA_40_final.json"
 # Group A final v1 ("final-v1-2026-11-16"), 40 originals. Labels are teacher-model generated, checked
@@ -67,6 +85,8 @@ class Group:
 
 
 GROUPS = {
+    # Group B's labels_note describes v3 and is kept for v3 runs and for configs whose file has no note of
+    # its own in LABELS_NOTES (older Group B configs). The default, v4, has its own note there.
     "B": Group("B", GRADER_VISIBLE, RULES_DATASET, TEST_ID_RE, DEFAULT_DATASET, EXPECTED_SHA256,
                "Scored against Group B AI-drafted labels, human-reviewed; provisional and not independently "
                "TA-verified or frozen. Not answer-key results."),
@@ -76,6 +96,11 @@ GROUPS = {
                "audit, with human decisions on 4 cases; not independently human-verified or frozen. Not "
                "answer-key results."),
 }
+# Pinned test-set files: file -> SHA-256, used when the file is chosen with --dataset and no hash is
+# given (a group's default file is also checked against its group's hash).
+PINNED_SHA256 = {GROUP_B_V3_DATASET: GROUP_B_V3_SHA256, GROUP_B_V4_DATASET: GROUP_B_V4_SHA256}
+# Labels notes that depend on the file, not only on the group: SHA-256 -> note.
+LABELS_NOTES = {GROUP_B_V4_SHA256: GROUP_B_V4_LABELS_NOTE}
 MARKS_RE = re.compile(r"\[(\d+) marks\]\s*$")
 IDENTICAL_TYPES = ("paraphrase", "fairness", "robustness")
 
@@ -160,8 +185,19 @@ def group_name(data: dict) -> str:
 
 
 def labels_note(config_dataset: dict) -> str:
-    """The labels note for a run config's `dataset` entry (no `group` key means Group B)."""
-    return GROUPS[config_dataset.get("group", "B")].labels_note
+    """The labels note for a run config's `dataset` entry: the file's own note if it has one (by SHA-256),
+    otherwise its group's (no `group` key means Group B)."""
+    return LABELS_NOTES.get(config_dataset.get("sha256")) or GROUPS[config_dataset.get("group", "B")].labels_note
+
+
+def default_sha256(group: Group, path=None) -> str:
+    """The hash a file must have when none is given: a pinned file's own, otherwise the group's."""
+    if path is not None:
+        resolved = Path(path).expanduser().resolve()
+        for pinned, sha in PINNED_SHA256.items():
+            if resolved == pinned.resolve():
+                return sha
+    return group.default_sha256
 
 
 def load(path=DEFAULT_DATASET, expected_sha256: str | None = EXPECTED_SHA256) -> Dataset:
@@ -193,10 +229,11 @@ def load(path=DEFAULT_DATASET, expected_sha256: str | None = EXPECTED_SHA256) ->
 
 
 def load_group(name: str, path=None, expected_sha256: str | None = "default") -> Dataset:
-    """Load a group's test set: its default file and hash unless given. Checks the group matches."""
+    """Load a group's test set: its default file unless given, and the file's pinned hash (or the
+    group's) unless given. Checks the group matches."""
     group = GROUPS[name]
     ds = load(path or group.default_path,
-              group.default_sha256 if expected_sha256 == "default" else expected_sha256)
+              default_sha256(group, path) if expected_sha256 == "default" else expected_sha256)
     if ds.group.name != name:
         raise DatasetError(f"{ds.path} is a Group {ds.group.name} test set, not Group {name}")
     return ds

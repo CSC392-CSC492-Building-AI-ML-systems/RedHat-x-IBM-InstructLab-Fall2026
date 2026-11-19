@@ -34,15 +34,20 @@ Re-score a finished run with the current parser and metrics, without a model:
 
 This writes a new rescore_<timestamp>/ folder inside the run and leaves the raw outputs alone.
 
-The test set is Group B (test_set/groupB_60_draft.json) unless --group A is given, which uses
+The test set is Group B v4 (test_set/groupB_v4_101.json) unless --group A is given, which uses
 test_set/groupA_40_final.json and each case's own general_rules. --dataset and --expected-sha256
-override the group's file and hash; the file's own group must match --group.
+override the group's file and hash; the file's own group must match --group. A pinned file (Group B
+v3, test_set/groupB_60_draft.json, the default until 2026-11-19, or v4) is checked against its own
+pinned hash when no --expected-sha256 is given. --rescore uses the file and hash in the run's config.
 
     python eval/run_eval.py --group A --model base --out runs --endpoint http://localhost:8000/v1
+    python eval/run_eval.py --dataset test_set/groupB_60_draft.json --model base --out runs --endpoint ...
 
-Every result is provisional: the Group B labels are AI-drafted and human-reviewed, but not
-independently TA-verified or frozen. The Group A labels are teacher-model generated and checked in
-an AI-assisted audit, with human decisions on 4 cases, but not independently human-verified or frozen.
+Every result is provisional: the Group B v3 labels are AI-drafted and human-reviewed, but not
+independently TA-verified or frozen. In Group B v4, the 41 cases added to the v3 cases are AI-drafted
+and AI-reviewed, not independently human-verified. The Group A labels are teacher-model generated and
+checked in an AI-assisted audit, with human decisions on 4 cases, but not independently human-verified
+or frozen. Each run's files say which labels it was scored against.
 """
 
 from __future__ import annotations
@@ -68,7 +73,7 @@ RAW = "raw_outputs.jsonl"
 PARSED = "parsed.jsonl"
 METRICS = "metrics.json"
 SUMMARY = "summary.md"
-PROVISIONAL_NOTE = dataset.GROUPS["B"].labels_note  # Group B; see dataset.labels_note for any run
+PROVISIONAL_NOTE = dataset.GROUPS["B"].labels_note  # Group B v3; see dataset.labels_note for any run
 
 
 class RunError(Exception):
@@ -283,7 +288,7 @@ def run(args, client=None) -> tuple[Path, int]:
         "created_at": now(),
         "status": "running",
         "provisional": True,
-        "labels_note": ds.group.labels_note,
+        "labels_note": dataset.labels_note(ds.describe()),
         "dataset": ds.describe(),
         "prompt": prompt.describe(ds),
         "prompts_file": prompts_file,
@@ -386,9 +391,10 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--model", choices=sorted(backends.SERVED_MODELS))
     p.add_argument("--out", help="folder for run folders")
     p.add_argument("--group", choices=sorted(dataset.GROUPS),
-                   help="test set: B (default, test_set/groupB_60_draft.json) or A (test_set/groupA_40_final.json)")
-    p.add_argument("--dataset", help="test set file (default: the group's file)")
-    p.add_argument("--expected-sha256", help="the test set's SHA-256 (default: the group's)")
+                   help="test set: B (default, v4: test_set/groupB_v4_101.json) or A (test_set/groupA_40_final.json)")
+    p.add_argument("--dataset", help="test set file (default: the group's file), e.g. test_set/groupB_60_draft.json "
+                                     "for Group B v3")
+    p.add_argument("--expected-sha256", help="the test set's SHA-256 (default: a pinned file's own, else the group's)")
     p.add_argument("--test-type", type=csv, help="comma-separated: " + ",".join(dataset.TEST_TYPES))
     p.add_argument("--topic", type=csv, help="comma-separated topics")
     p.add_argument("--question-id", type=csv, help="comma-separated question ids")

@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+from eval import dataset
+
 PROVISIONAL = ("> **PROVISIONAL LABELS.** Scored against the Group B AI-drafted labels (draft v3), human-reviewed; "
                "provisional and not independently TA-verified or frozen. These are not answer-key results and must "
                "not be reported as such.")
 PROVISIONAL_A = ("> **PROVISIONAL LABELS.** Scored against the Group A labels (final v1): teacher-model generated, "
                  "checked in an AI-assisted mathematical audit, with human decisions on 4 cases; not independently "
                  "human-verified or frozen. These are not answer-key results and must not be reported as such.")
+PROVISIONAL_B_V4 = ("> **PROVISIONAL LABELS.** Scored against the Group B v4 labels, which are AI-drafted: the 60 "
+                    "cases are carried over unchanged from draft v3, and the 41 cases added in v4 are AI-reviewed, "
+                    "not independently verified by a human. Not TA-verified or frozen. These are not answer-key "
+                    "results and must not be reported as such.")
+# Banners that depend on the file, not only on the group: SHA-256 -> banner.
+PROVISIONAL_BY_SHA256 = {dataset.GROUP_B_V4_SHA256: PROVISIONAL_B_V4}
 LAYOUT_UNVERIFIED = ("> **Prompt layout unverified.** The student-answer layout of the evaluation prompt has not "
                      "yet been checked against real training data on Fir (eval/PROMPT.md).")
 
@@ -36,7 +44,10 @@ def table(header: list[str], rows: list[list]) -> list[str]:
 
 
 def provisional_banner(config_dataset: dict) -> str:
-    """The labels banner for a run config's `dataset` entry (no `group` key means Group B)."""
+    """The labels banner for a run config's `dataset` entry: the file's own banner if it has one (by
+    SHA-256), otherwise its group's (no `group` key means Group B)."""
+    if config_dataset.get("sha256") in PROVISIONAL_BY_SHA256:
+        return PROVISIONAL_BY_SHA256[config_dataset["sha256"]]
     return PROVISIONAL_A if config_dataset.get("group") == "A" else PROVISIONAL
 
 

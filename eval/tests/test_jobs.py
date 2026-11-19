@@ -98,7 +98,7 @@ names = opt("--served-model-name") + [m.split("=", 1)[0] for m in opt("--lora-mo
 from eval import dataset, prompt
 from eval.tests.fixtures import render_grade
 cases, by_hash = {}, {}
-for ds in (dataset.load_group("B"), dataset.load_group("A")):
+for ds in (dataset.load_group("B"), dataset.load_group("A"), dataset.load_group("B", dataset.GROUP_B_V3_DATASET)):
     cases.update(ds.by_id())
     by_hash.update({r["prompt_sha256"]: r["test_id"] for r in prompt.build_prompts(ds)})
 model_lists = []
@@ -347,9 +347,9 @@ class PreflightTest(unittest.TestCase):
                 ("A", ["--test-type", "fairness", "--topic", "regex"],
                  ["--test-type fairness and --topic regex together match none", "--topic regex: 5"]),
                 ("B", ["--test-type", "robustness", "--topic", "regular_languages"],
-                 ["--test-type robustness and --topic regular_languages together match none of the 60 cases",
-                  "Group B test set", "test_set/groupB_60_draft.json", dataset.EXPECTED_SHA256[:12],
-                  "--test-type robustness: 5", "--topic regular_languages: 6"])):
+                 ["--test-type robustness and --topic regular_languages together match none of the 101 cases",
+                  "Group B test set", "test_set/groupB_v4_101.json", dataset.GROUP_B_V4_SHA256[:12],
+                  "--test-type robustness: 12", "--topic regular_languages: 9"])):
             with self.subTest(group=group, args=args):
                 problems = self.check(group=group, run_args=args)[0]
                 empty = [p for p in problems if "no test cases selected" in p]
@@ -375,6 +375,56 @@ class PreflightTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(out.write.call_args_list, [])  # no shell assignments for the job to use
         self.assertIn("no test cases selected", "".join(c.args[0] for c in err.write.call_args_list))
+
+    def test_dataset_file(self):
+        c, v4, v3 = self.cluster, "test_set/groupB_v4_101.json", "test_set/groupB_60_draft.json"
+
+        def run(run_args=(), **kwargs):
+            return preflight.check(REPO, str(c.model), str(c.adapter), str(c.out), list(run_args), **kwargs)
+
+        for sha in (None, dataset.GROUP_B_V4_SHA256):  # the pinned hash is used when none is given
+            problems, info, _ = run(dataset_path=v4, expected_sha256=sha)
+            self.assertEqual(problems, [])
+            self.assertEqual((info["DATASET_GROUP"], info["DATASET_PATH"], info["DATASET_SHA256"]),
+                             ("B", str(dataset.GROUP_B_V4_DATASET), dataset.GROUP_B_V4_SHA256))
+            self.assertEqual(info["DATASET_LABELS"], dataset.GROUP_B_V4_LABELS_NOTE)
+        # Without a file: the default, v4, with its labels note but no DATASET_PATH (the runs pass no --dataset).
+        problems, info, _ = run()
+        self.assertEqual((problems, info["DATASET_SHA256"]), ([], dataset.GROUP_B_V4_SHA256))
+        self.assertEqual(info["DATASET_LABELS"], dataset.GROUP_B_V4_LABELS_NOTE)
+        self.assertNotIn("DATASET_PATH", info)
+        # v3 by its file: its pinned hash, and no file-specific note (the job prints the Group B v3 one).
+        for sha in (None, dataset.GROUP_B_V3_SHA256):
+            problems, info, _ = run(dataset_path=v3, expected_sha256=sha)
+            self.assertEqual(problems, [])
+            self.assertEqual((info["DATASET_PATH"], info["DATASET_SHA256"]),
+                             (str(dataset.GROUP_B_V3_DATASET), dataset.GROUP_B_V3_SHA256))
+            self.assertNotIn("DATASET_LABELS", info)
+        # Filters are checked against the chosen file: regex_31 is only in v4.
+        self.assertEqual(run(["--question-id", "csc236_B_regex_31"], dataset_path=v4)[0], [])
+        self.assertEqual(run(["--question-id", "csc236_B_regex_31"])[0], [])
+        self.assertTrue(any("unknown question id" in p
+                            for p in run(["--question-id", "csc236_B_regex_31"], dataset_path=v3)[0]))
+        for kwargs, fragment in (({"dataset_path": v4, "expected_sha256": "0" * 64}, "expected " + "0" * 64),
+                                 ({"dataset_path": v3, "expected_sha256": dataset.GROUP_B_V4_SHA256},
+                                  "expected " + dataset.GROUP_B_V4_SHA256),
+                                 ({"dataset_path": v4, "group": "A"}, "not Group A"),
+                                 ({"expected_sha256": dataset.GROUP_B_V4_SHA256}, "without a dataset file"),
+                                 ({"dataset_path": "test_set/nowhere.json"}, "nowhere.json"),
+                                 ({"dataset_path": str(dataset.GROUP_A_DATASET),
+                                   "expected_sha256": dataset.GROUP_A_SHA256}, "not Group B")):
+            with self.subTest(**kwargs):
+                self.assertTrue(any(fragment in p for p in run(**kwargs)[0]), run(**kwargs)[0])
+        self.assertTrue(any("sets --dataset itself" in p for p in run(["--dataset", v4])[0]))
+
+        with mock.patch("sys.stdout") as out, mock.patch("sys.stderr"):
+            code = preflight.main(["--base-model", str(c.model), "--out", str(c.out), "--dataset", v4])
+        self.assertEqual(code, 0)
+        printed = "".join(call.args[0] for call in out.write.call_args_list)
+        env = subprocess.run(["bash", "-c", printed + '\nprintf "%s|%s|%s" "$DATASET_PATH" "$DATASET_SHA256" '
+                              '"$DATASET_LABELS"'], capture_output=True, text=True)
+        self.assertEqual(env.stdout, f"{dataset.GROUP_B_V4_DATASET}|{dataset.GROUP_B_V4_SHA256}|"
+                                     f"{dataset.GROUP_B_V4_LABELS_NOTE}")
 
     def test_output_is_safe_for_the_shell(self):
         weird = self.cluster.root / "out dir; rm -rf ~"
@@ -480,8 +530,13 @@ class JobScriptTest(unittest.TestCase):
         sent = json.loads(settings.pop())
         self.assertEqual((sent["temperature"], sent["chat_template_kwargs"]), (0.0, {"enable_thinking": False}))
         self.assertFalse(c.vllm_alive(), "vLLM was left running")
+        # The default test set is Group B v4, and the job says which labels the results were scored against.
+        self.assertEqual((a["dataset"]["sha256"], a["dataset"]["path"]),
+                         (dataset.GROUP_B_V4_SHA256, str(dataset.GROUP_B_V4_DATASET)))
+        self.assertIn("Test set: Group B   ", r.stdout)
         self.assertIn("provisional", r.stdout)
-        self.assertIn("human-reviewed, but not independently TA-verified or frozen", r.stdout)
+        self.assertIn(dataset.GROUP_B_V4_LABELS_NOTE, r.stdout)
+        self.assertNotIn("human-reviewed, but not independently TA-verified or frozen", r.stdout)
 
     def test_full_job_group_a(self):
         c = self.cluster()
@@ -505,6 +560,63 @@ class JobScriptTest(unittest.TestCase):
         self.assertEqual(metrics["criterion"]["strict_exact_agreement"]["value"], 1.0)
         self.assertIn("Group A labels", (cmp / "compare.md").read_text())
         self.assertIn("Group A labels are teacher-model generated", r.stdout)
+        self.assertFalse(c.vllm_alive())
+
+    def test_full_job_group_b_v4(self):
+        c = self.cluster()
+        question = "csc236_B_dfa_25"  # only in v4
+        r = c.run("--", "--question-id", question, "--n-boot", "20", DATASET="test_set/groupB_v4_101.json")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("Test set: Group B (test_set/groupB_v4_101.json)", r.stdout)
+        root = c.out / "4242"
+        (base_run,) = (root / "base").iterdir()
+        (ft_run,) = (root / "fine_tuned").iterdir()
+        (cmp,) = (root / "compare").iterdir()
+        for config in (json.loads((base_run / "config.json").read_text()),
+                       json.loads((ft_run / "config.json").read_text())):
+            self.assertEqual(config["status"], "complete")
+            self.assertEqual((config["dataset"]["sha256"], config["dataset"]["case_count"]),
+                             (dataset.GROUP_B_V4_SHA256, 101))
+            self.assertEqual(config["dataset"]["path"], str(dataset.GROUP_B_V4_DATASET))
+            self.assertEqual(config["selection"]["selected_count"], 3)
+            self.assertEqual(config["labels_note"], dataset.GROUP_B_V4_LABELS_NOTE)
+        metrics = json.loads((base_run / "metrics.json").read_text())
+        self.assertEqual(metrics["criterion"]["strict_exact_agreement"]["value"], 1.0)
+        self.assertNotIn("review_status", metrics["breakdowns"])
+        self.assertIn("Group B v4 labels", (cmp / "compare.md").read_text())
+        self.assertIn(dataset.GROUP_B_V4_LABELS_NOTE, r.stdout)
+        self.assertNotIn("human-reviewed, but not independently TA-verified or frozen", r.stdout)
+        self.assertFalse(c.vllm_alive())
+
+        # A wrong hash stops the job before vLLM starts.
+        c = self.cluster()
+        r = c.run("--check", DATASET="test_set/groupB_v4_101.json", DATASET_SHA256="0" * 64)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("expected " + "0" * 64, r.stderr)
+        self.assertEqual(c.calls(), [])
+
+    def test_full_job_group_b_v3(self):
+        # v3, chosen by its file, runs as it did when it was the default.
+        c = self.cluster()
+        r = c.run("--", "--question-id", self.question, "--n-boot", "20", DATASET="test_set/groupB_60_draft.json")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("Test set: Group B (test_set/groupB_60_draft.json)", r.stdout)
+        root = c.out / "4242"
+        (base_run,) = (root / "base").iterdir()
+        (ft_run,) = (root / "fine_tuned").iterdir()
+        (cmp,) = (root / "compare").iterdir()
+        v3 = dataset.load_group("B", dataset.GROUP_B_V3_DATASET)
+        for config in (json.loads((base_run / "config.json").read_text()),
+                       json.loads((ft_run / "config.json").read_text())):
+            self.assertEqual(config["status"], "complete")
+            self.assertEqual(config["dataset"], v3.describe())
+            self.assertEqual(config["labels_note"], dataset.GROUPS["B"].labels_note)
+        metrics = json.loads((base_run / "metrics.json").read_text())
+        self.assertEqual(metrics["criterion"]["strict_exact_agreement"]["value"], 1.0)
+        self.assertIn("review_status", metrics["breakdowns"])
+        self.assertIn("Group B AI-drafted labels", (cmp / "compare.md").read_text())
+        self.assertIn("human-reviewed, but not independently TA-verified or frozen", r.stdout)
+        self.assertNotIn(dataset.GROUP_B_V4_LABELS_NOTE, r.stdout)
         self.assertFalse(c.vllm_alive())
 
     def test_base_only_without_adapter(self):

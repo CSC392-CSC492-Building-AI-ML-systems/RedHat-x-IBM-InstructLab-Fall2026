@@ -37,15 +37,18 @@ def user_text(messages):
 
 
 class GroupBUnchangedTest(unittest.TestCase):
-    """Group B prompts and configs are byte for byte what they were before Group A support."""
+    """Group B v3 prompts and configs are byte for byte what they were before Group A support. v3 is no
+    longer the default (v4 is; see test_group_b_v4), so it is loaded by its file."""
 
     @classmethod
     def setUpClass(cls):
-        cls.ds = dataset.load()
+        cls.ds = dataset.load_group("B", dataset.GROUP_B_V3_DATASET)
 
     def test_default_load_is_group_b(self):
-        self.assertEqual((self.ds.group.name, self.ds.sha256, len(self.ds.cases)), ("B", dataset.EXPECTED_SHA256, 60))
-        self.assertEqual(dataset.load_group("B").sha256, self.ds.sha256)
+        self.assertEqual((self.ds.group.name, self.ds.sha256, len(self.ds.cases)),
+                         ("B", dataset.GROUP_B_V3_SHA256, 60))
+        self.assertEqual(dataset.load(dataset.GROUP_B_V3_DATASET, dataset.GROUP_B_V3_SHA256).sha256, self.ds.sha256)
+        self.assertEqual(dataset.load_group("B").group.name, "B")
         self.assertNotIn("group", self.ds.describe())  # Group B run configs keep their old shape
         self.assertEqual(dataset.check_structure(self.ds), [])
 
@@ -99,7 +102,10 @@ class GroupALoadTest(unittest.TestCase):
 
     def test_wrong_file_or_group_refused(self):
         with self.assertRaisesRegex(dataset.DatasetError, "SHA-256"):
-            dataset.load_group("A", dataset.DEFAULT_DATASET)
+            dataset.load_group("A", dataset.DEFAULT_DATASET, dataset.GROUP_A_SHA256)
+        for path in (dataset.GROUP_B_V4_DATASET, dataset.GROUP_B_V3_DATASET):  # pinned: their own hash, then the group
+            with self.assertRaisesRegex(dataset.DatasetError, "is a Group B test set, not Group A"):
+                dataset.load_group("A", path)
         with self.assertRaisesRegex(dataset.DatasetError, "is a Group B test set, not Group A"):
             dataset.load_group("A", dataset.DEFAULT_DATASET, expected_sha256=None)
         with self.assertRaisesRegex(dataset.DatasetError, "is a Group A test set, not Group B"):
@@ -306,6 +312,8 @@ class GroupARunTest(unittest.TestCase):
         self.assertEqual(load("A", None, None).group.name, "A")
         self.assertEqual(load(None, str(dataset.GROUP_A_DATASET), None).group.name, "A")  # the group's file
         with self.assertRaisesRegex(dataset.DatasetError, "SHA-256"):
+            load("A", str(dataset.DEFAULT_DATASET), dataset.GROUP_A_SHA256)
+        with self.assertRaisesRegex(dataset.DatasetError, "not Group A"):
             load("A", str(dataset.DEFAULT_DATASET), None)
         with self.assertRaisesRegex(dataset.DatasetError, "not Group A"):
             load("A", str(dataset.DEFAULT_DATASET), dataset.EXPECTED_SHA256)

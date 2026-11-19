@@ -1,10 +1,11 @@
 """Checks for eval/jobs/run_eval.sh that need no GPU, run before any model is loaded.
 
     python -m eval.jobs.preflight --base-model models/Qwen3.8-27B [--adapter DIR] --out DIR [--group A|B] \
-        [-- RUN ARGS]
+        [--dataset FILE [--expected-sha256 HASH]] [-- RUN ARGS]
 
 Checks:
-- the repo and the test set of the chosen group (B by default): its file, hash, group and structure;
+- the repo and the test set of the chosen group (B by default), or the --dataset file (relative to the
+  repo; its pinned hash, or --expected-sha256, else the group's): its file, hash, group and structure;
 - the Python packages the evaluation needs;
 - the vllm and curl commands;
 - the base model folder;
@@ -130,7 +131,8 @@ def check_adapter(adapter: Path, base_model: str, base_resolved: Path, repo: Pat
 
 
 def check(repo: Path, base_model: str, adapter: str | None, out: str, run_args: list[str],
-          group: str = "B") -> tuple[list[str], dict, list[str]]:
+          group: str = "B", dataset_path: str | None = None,
+          expected_sha256: str | None = None) -> tuple[list[str], dict, list[str]]:
     problems, warnings = [], []
     info = {"REPO": str(repo), "BASE_MODEL_RECORD": base_model, "BASE_NAME": backends.SERVED_MODELS["base"],
             "FT_NAME": backends.SERVED_MODELS["fine_tuned"], "MODE": "base_and_fine_tuned" if adapter else "base_only"}
@@ -142,9 +144,18 @@ def check(repo: Path, base_model: str, adapter: str | None, out: str, run_args: 
         problems.append(f"unknown test-set group {group!r}; choose from {sorted(dataset.GROUPS)}")
     else:
         try:
-            ds = dataset.load_group(group)
+            if dataset_path:
+                path = resolve(dataset_path, repo)
+                ds = dataset.load_group(group, path, expected_sha256 or "default")
+                info["DATASET_PATH"] = str(path)
+            elif expected_sha256:
+                raise dataset.DatasetError("an expected SHA-256 was given without a dataset file")
+            else:
+                ds = dataset.load_group(group)
             info["DATASET_GROUP"] = group
             info["DATASET_SHA256"] = ds.sha256
+            if ds.sha256 in dataset.LABELS_NOTES:
+                info["DATASET_LABELS"] = dataset.LABELS_NOTES[ds.sha256]
             problems += [f"test set: {p}" for p in dataset.check_structure(ds)]
         except (dataset.DatasetError, OSError) as exc:
             problems.append(str(exc))
@@ -189,10 +200,13 @@ def main(argv=None) -> int:
     p.add_argument("--adapter", default="")
     p.add_argument("--out", required=True)
     p.add_argument("--group", default="B", help="test set: B (default) or A")
+    p.add_argument("--dataset", default="", help="test set file instead of the group's (relative to the repo)")
+    p.add_argument("--expected-sha256", default="", help="its SHA-256 (default: a pinned file's own, else the group's)")
     p.add_argument("run_args", nargs="*", help="run_eval.py options for both runs (after --)")
     args = p.parse_args(argv)
     problems, info, warnings = check(Path(args.repo).resolve(), args.base_model, args.adapter or None, args.out,
-                                     args.run_args, group=args.group)
+                                     args.run_args, group=args.group, dataset_path=args.dataset or None,
+                                     expected_sha256=args.expected_sha256 or None)
     for w in warnings:
         print(f"Note: {w}", file=sys.stderr)
     if problems:

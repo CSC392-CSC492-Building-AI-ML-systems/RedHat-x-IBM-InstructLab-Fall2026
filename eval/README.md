@@ -2,16 +2,17 @@
 
 Runs the test set against the base model and the fine-tuned model with identical prompts and decoding settings, parses each criterion-level grade, scores it against the labels, and compares the two models. Part of milestone 7.
 
-> **All results are provisional.** The Group B labels (v3) are AI-drafted and human-reviewed, but not independently TA-verified or frozen. The Group A labels (final v1) are teacher-model generated and checked in an AI-assisted audit, with human decisions on 4 cases, but not independently human-verified or frozen. Every output file says which labels it was scored against.
+> **All results are provisional.** Group B v4, the default, holds the 60 v3 cases and 41 added cases. The labels of the added cases are AI-drafted and AI-reviewed, not independently verified by a human. The Group B v3 labels are AI-drafted and human-reviewed, but not independently TA-verified or frozen. The Group A labels (final v1) are teacher-model generated and checked in an AI-assisted audit, with human decisions on 4 cases, but not independently human-verified or frozen. Every output file says which labels it was scored against.
 
 ## Test sets
 
 | Group | File | Selected with | General rules in the prompt |
 |---|---|---|---|
-| B (default) | `test_set/groupB_60_draft.json`, SHA-256 `ecd69def…` | nothing, or `--group B` | the dataset's 4 `grading_policies`, the same for every case |
+| B v4 (default) | `test_set/groupB_v4_101.json`, SHA-256 `24d7f3bf…` (101 cases, 32 questions; no `review_status` field) | nothing, or `--group B` | the dataset's 4 `grading_policies`, the same for every case |
+| B v3 | `test_set/groupB_60_draft.json`, SHA-256 `ecd69def…` (60 cases, 20 questions; the default until 2026-11-19) | `--dataset test_set/groupB_60_draft.json` (job: `DATASET=test_set/groupB_60_draft.json`) | as v4: v4's first 60 prompts are byte-identical to v3's |
 | A | `test_set/groupA_40_final.json`, SHA-256 `226fb916…` | `--group A` (job: `TEST_SET=A`) | each case's own `general_rules`, from its training seed |
 
-`--dataset` and `--expected-sha256` override the group's file and hash, and the file's cases must belong to that group. Runs of different groups can't be compared. Group A has only `original` cases, so its consistency, fairness, sensitivity and robustness metrics have no pairs.
+`--dataset` and `--expected-sha256` (job: `DATASET`, `DATASET_SHA256`) override the group's file and hash, and the file's cases must belong to that group. A pinned file (Group B v3 or v4) is checked against its own pinned hash when none is given. `--rescore` always uses the file and hash in the run's own config, so runs made on v3 are re-scored against v3. Runs on different files can't be compared: to compare with runs made on v3, run on v3. Runs of different groups can't be compared. Group A has only `original` cases, so its consistency, fairness, sensitivity and robustness metrics have no pairs.
 
 ## Use
 
@@ -22,6 +23,7 @@ ADAPTER=models/adapters/<name> bash eval/jobs/run_eval.sh --check     # login no
 ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh            # base, fine-tuned, comparison
 sbatch eval/jobs/run_eval.sh -- --test-type paraphrase,sensitivity     # options go to both runs
 TEST_SET=A ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh # Group A test set
+DATASET=test_set/groupB_60_draft.json ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh  # Group B v3
 ```
 
 By hand, with a vLLM server already running:
@@ -41,7 +43,7 @@ Filters: `--test-type`, `--topic`, `--question-id`. Output folders must be outsi
 
 | File | Does |
 |---|---|
-| `dataset.py` | Loads a test set (Group B or A) and checks its SHA-256 and group. Selects cases with filters, adding variant parents as context. |
+| `dataset.py` | Loads a test set (Group B v4 or v3, or Group A) and checks its SHA-256 and group. Selects cases with filters, adding variant parents as context. |
 | `prompt.py` | Builds the prompt (question, rubric, general rules, output format, answer), with a leak guard and template hash. See [`PROMPT.md`](PROMPT.md). |
 | `backends.py` | Sends prompts to vLLM: fixed decoding, no retries, failures recorded. |
 | `parse.py` | Parses the Markdown grade. Failed predictions are never turned into 0. |
@@ -65,7 +67,7 @@ Tests: `python3 -m unittest discover -s eval/tests -t .` (offline; no model or G
 | Sensitivity (a removed step or added error lowers the grade) | `relations.sensitivity.affected_and_total_drop`, `.any_total_drop` |
 | Robustness (prompt injection, keyword stuffing) | `relations.robustness` (pass rate, grade raised above the parent's) |
 | Output correctness (valid format, scores in range) | `format.*`, `criterion.coverage` |
-| Per-topic and per-test-type analysis; by rubric level | `breakdowns.topic`, `.test_type`, `.gold_level`, `.review_status` |
+| Per-topic and per-test-type analysis; by rubric level | `breakdowns.topic`, `.test_type`, `.gold_level`, `.review_status` (only when the test set has that field; Group B v4 does not) |
 | Uncertainty | `headline_ci`: bootstrap intervals over questions; compare.py adds paired intervals |
 
 Two definitions are still open team decisions, so both variants are reported:

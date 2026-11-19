@@ -39,6 +39,9 @@ LEVEL_ORDER = {"none": 0, "minimal": 1, "partial": 2, "full": 3}
 # Per-topic and per-test-type analysis (Proposal), by rubric level and pilot vs new cases (Ethics §3).
 # Writing style (typos, irregular phrasing) is the fairness test type.
 BREAKDOWNS = ("topic", "test_type", "gold_level", "review_status")
+# Case fields a test set may leave out (Group B v4 has no review_status). Their breakdown is left out
+# when no selected case has the field.
+OPTIONAL_CASE_FIELDS = ("review_status",)
 N_BOOT = 1000
 SEED = 0
 # Planned in the Proposal and Ethics document, not built yet: recorded in every metrics.json.
@@ -152,7 +155,8 @@ def build_rows(ds: dataset.Dataset, selection: dataset.Selection, parsed: dict[s
         tid = case["test_id"]
         view, gold = views[tid], dataset.gold_criteria(case)
         info = {"cluster": case["question_id"], "test_id": tid, "topic": case["topic"],
-                "test_type": case["test_type"], "review_status": case["review_status"]}
+                "test_type": case["test_type"]}
+        info.update({key: case[key] for key in OPTIONAL_CASE_FIELDS if key in case})
         for cid, g in gold.items():
             c = view.criteria[cid]
             rows.criteria.append({**info, "criterion_id": cid, "max": g["max"],
@@ -313,6 +317,8 @@ def _relation_metrics(rows: Rows) -> dict:
 def _breakdowns(rows: Rows) -> dict:
     out = {}
     for key in BREAKDOWNS:
+        if key in OPTIONAL_CASE_FIELDS and rows.criteria and not any(key in r for r in rows.criteria):
+            continue
         groups = defaultdict(list)
         for r in rows.criteria:
             groups[r[key]].append(r)
@@ -408,9 +414,10 @@ def summarize(ds: dataset.Dataset, selection: dataset.Selection, parsed: dict[st
     result["selection"] = selection.describe()
     result["labels"] = {"source": "draft_ground_truth", "dataset_version": ds.version,
                         "dataset_sha256": ds.sha256, "provisional": True,
-                        "note": "AI-drafted labels, human-reviewed; provisional and not independently TA-verified "
-                                "or frozen. Not reportable answer-key results."
-                        if ds.group.name == "B" else ds.group.labels_note}
+                        "note": dataset.LABELS_NOTES.get(ds.sha256) or (
+                            "AI-drafted labels, human-reviewed; provisional and not independently TA-verified "
+                            "or frozen. Not reportable answer-key results."
+                            if ds.group.name == "B" else ds.group.labels_note)}
     result["settings"] = {"n_boot": n_boot, "seed": seed, "cluster": "question_id"}
     result["not_yet_implemented"] = NOT_YET_IMPLEMENTED
     result["definitions"] = DEFINITIONS

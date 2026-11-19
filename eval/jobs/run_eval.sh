@@ -23,6 +23,7 @@
 #   ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh -- --test-type paraphrase,sensitivity
 #   sbatch eval/jobs/run_eval.sh          # no ADAPTER: base model only, no comparison
 #   TEST_SET=A ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh   # Group A test set
+#   DATASET=test_set/groupB_60_draft.json ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh  # Group B v3
 # Check the setup without a GPU, on a login node:
 #   ADAPTER=models/adapters/<name> bash eval/jobs/run_eval.sh --check
 #
@@ -33,8 +34,12 @@
 #   ADAPTER     the fine-tuned LoRA folder, from training/train_lora.py. Optional. The job never
 #               assumes a grading-skills adapter exists: it checks the folder, and the adapter's
 #               training data is printed so you can confirm it.
-#   TEST_SET    B (default, test_set/groupB_60_draft.json) or A (test_set/groupA_40_final.json,
+#   TEST_SET    B (default, Group B v4: test_set/groupB_v4_101.json) or A (test_set/groupA_40_final.json,
 #               graded with each case's own general rules)
+#   DATASET     a test set file of that group instead of its default, relative to the repo, e.g.
+#               test_set/groupB_60_draft.json (Group B v3, the default until 2026-11-19). Optional.
+#   DATASET_SHA256  the SHA-256 that DATASET must have. Optional: a pinned file (such as Group B v4)
+#               is checked against its pinned hash, any other file against the group's.
 #   BASE_MODEL  base model folder (default models/Qwen3.8-27B, as in jobs/serve_model.sh)
 #   EVAL_OUT    where results go (default ~/scratch/gradeai-eval). Must be outside the repo: the
 #               outputs contain test-set text. Each job writes EVAL_OUT/<job id>/.
@@ -64,6 +69,8 @@ REPO="${SLURM_SUBMIT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 cd "$REPO"
 
 TEST_SET="${TEST_SET:-B}"
+DATASET="${DATASET:-}"
+DATASET_SHA256="${DATASET_SHA256:-}"
 BASE_MODEL="${BASE_MODEL:-models/Qwen3.8-27B}"
 ADAPTER="${ADAPTER:-}"
 EVAL_OUT="${EVAL_OUT:-$HOME/scratch/gradeai-eval}"
@@ -77,7 +84,7 @@ STOP_TIMEOUT="${STOP_TIMEOUT:-20}"
 VLLM_PID=""
 
 echo "GradeAI evaluation, job $JOB_TAG on $(hostname), started $(date)"
-echo "Test set: Group $TEST_SET   Base model: $BASE_MODEL   Adapter: ${ADAPTER:-none}   Output: $EVAL_OUT"
+echo "Test set: Group $TEST_SET${DATASET:+ ($DATASET)}   Base model: $BASE_MODEL   Adapter: ${ADAPTER:-none}   Output: $EVAL_OUT"
 [ ${#EVAL_ARGS[@]} -gt 0 ] && echo "Options for both runs: ${EVAL_ARGS[*]}"
 
 # ---- Environment (the same modules as jobs/serve_model.sh) ----------------------------------
@@ -93,11 +100,19 @@ fi
 source "$VENV/bin/activate"
 
 # ---- Checks that need no GPU ------------------------------------------------------------------
+DATASET_ARGS=()
+[ -n "$DATASET" ] && DATASET_ARGS+=(--dataset "$DATASET")
+[ -n "$DATASET_SHA256" ] && DATASET_ARGS+=(--expected-sha256 "$DATASET_SHA256")
 if ! PREFLIGHT="$(python -m eval.jobs.preflight --base-model "$BASE_MODEL" --adapter "$ADAPTER" \
-    --out "$EVAL_OUT" --group "$TEST_SET" -- "${EVAL_ARGS[@]}")"; then
+    --out "$EVAL_OUT" --group "$TEST_SET" "${DATASET_ARGS[@]}" -- "${EVAL_ARGS[@]}")"; then
     exit 1
 fi
+DATASET_LABELS=""
 eval "$PREFLIGHT"
+# Both runs use the file and hash that preflight checked (only when DATASET was given, so that
+# default runs pass exactly the options they always did).
+RUN_DATASET_ARGS=()
+[ -n "$DATASET" ] && RUN_DATASET_ARGS=(--dataset "$DATASET_PATH" --expected-sha256 "$DATASET_SHA256")
 RUN_ROOT="$OUT/$JOB_TAG"
 if [ -e "$RUN_ROOT" ]; then
     echo "ERROR: $RUN_ROOT already exists; results are never overwritten."
@@ -215,7 +230,7 @@ only_run() {
 
 echo "Base model run, started $(date)"
 python -u eval/run_eval.py --model base --out "$RUN_ROOT/base" --group "$DATASET_GROUP" \
-    --endpoint "$ENDPOINT" --base-model "$BASE_MODEL_RECORD" "${EVAL_ARGS[@]}"
+    "${RUN_DATASET_ARGS[@]}" --endpoint "$ENDPOINT" --base-model "$BASE_MODEL_RECORD" "${EVAL_ARGS[@]}"
 BASE_RUN="$(only_run "$RUN_ROOT/base")"
 
 if [ "$MODE" = "base_only" ]; then
@@ -225,14 +240,16 @@ fi
 
 echo "Fine-tuned run, started $(date)"
 python -u eval/run_eval.py --model fine_tuned --out "$RUN_ROOT/fine_tuned" --group "$DATASET_GROUP" \
-    --endpoint "$ENDPOINT" --adapter "$ADAPTER_PATH" "${EVAL_ARGS[@]}"
+    "${RUN_DATASET_ARGS[@]}" --endpoint "$ENDPOINT" --adapter "$ADAPTER_PATH" "${EVAL_ARGS[@]}"
 FT_RUN="$(only_run "$RUN_ROOT/fine_tuned")"
 
 python -u eval/compare.py --base "$BASE_RUN" --fine-tuned "$FT_RUN" --out "$RUN_ROOT/compare" \
     "${COMPARE_ARGS[@]}"
 
 echo "Done at $(date). Results are in $RUN_ROOT"
-if [ "$DATASET_GROUP" = "A" ]; then
+if [ -n "$DATASET_LABELS" ]; then
+    echo "All results are provisional. $DATASET_LABELS"
+elif [ "$DATASET_GROUP" = "A" ]; then
     echo "All results are provisional: the Group A labels are teacher-model generated and AI-audited, with human decisions on 4 cases, but not independently human-verified or frozen."
 else
     echo "All results are provisional: the Group B labels are AI-drafted and human-reviewed, but not independently TA-verified or frozen."
