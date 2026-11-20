@@ -4,7 +4,7 @@ import { docGet, docList, docPatch, docSet, docDelete } from './docs'
 import { broadcast } from './events'
 import { newId } from './auth'
 import {
-  buildGradingPrompt, buildRubricImportPrompt, coerceRubric, gradingSchema, matchRoster, normalizeResult, parseJsonLoose,
+  buildGradingPrompt, buildRubricImportPrompt, coerceRubric, gradingSchema, matchRoster, normalizeResult, parseAndNormalizeGradeReply, parseJsonLoose,
   RUBRIC_SCHEMA, similarityPairs,
 } from '../src/lib/grading'
 import { DEFAULT_SETTINGS } from '../src/lib/defaults'
@@ -213,7 +213,7 @@ export function complete(taskId: string, ok: boolean, text: string, error: strin
   let result: ReturnType<typeof normalizeResult> | null = null
   let failure = error
   if (ok) {
-    try { result = normalizeResult(parseJsonLoose(text), rubric) } catch { failure = 'The model replied, but the grade could not be read.' }
+    try { result = parseAndNormalizeGradeReply(text, rubric) } catch { failure = 'The model replied, but the grade could not be read.' }
   }
 
   if (!result) {
