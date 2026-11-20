@@ -73,7 +73,7 @@ export function normalizeResult(raw: unknown, rubric: Rubric): GradeResult {
   const got = Array.isArray(o.criteria) ? (o.criteria as Record<string, unknown>[]) : []
   const criteria: CriterionResult[] = rubric.criteria.map((c: Criterion, i) => {
     const m = got.find(g => norm(String(g?.name ?? '')) === norm(c.name)) ?? got[i]
-    if (!m) return { name: c.name, earned: 0, max: c.points, level: 'Not assessed', note: 'Claude did not return a score for this criterion. Review it by hand.' }
+    if (!m) return { name: c.name, earned: 0, max: c.points, level: 'Not assessed', note: 'The model did not return a score for this criterion. Review it by hand.' }
     const earned = Math.max(0, Math.min(c.points, Math.round(toNum(m.earned) * 2) / 2))
     return { name: c.name, earned, max: c.points, level: String(m.level ?? ''), note: String(m.note ?? '').trim() }
   })
@@ -181,6 +181,215 @@ export function parseJsonLoose(text: string): unknown {
   const last = Math.max(t.lastIndexOf('}'), t.lastIndexOf(']'))
   if (Number.isFinite(first) && last > first) return JSON.parse(t.slice(first, last + 1))
   throw new Error('No JSON found in the model reply')
+}
+
+interface ParsedCritLine {
+  cid: string | null
+  name: string
+  level: string
+  earned: number
+  max: number
+  note: string
+}
+
+/**
+ * Parse a model reply written in the InstructLab / grade_first Markdown format:
+ *
+ * **Grade:** 8 / 10
+ *
+ * **Feedback:**
+ * - C1 Predicate and base case: partial (2/3). reason...
+ * - C2 Induction hypothesis: partial (2/3). reason...
+ * - C3 Inductive step: full (4/4). reason...
+ * Total: 2 + 2 + 4 = 8.
+ */
+export function parseMarkdownGrade(text: string, rubric: Rubric): GradeResult | null {
+  const NUM = '-?\\d+(?:\\.\\d+)?'
+  const BULLET = '(?:[-*•]|\\d+[.)])'
+  const CRIT_RE = new RegExp(
+    `^(?:\\s*${BULLET}\\s*)?\\*{0,2}(?:(C\\d+)\\b[\\s:*]*)?([^:\\n]*?)\\s*:\\s*\\*{0,2}([A-Za-z]+)\\*{0,2}\\s*\\(\\s*(${NUM})\\s*\\/\\s*(${NUM})\\s*\\)\\*{0,2}[.:;,]?\\s*(.*)$`,
+    'i'
+  )
+  const GRADE_RE = /\*{0,2}\bGrade\b\*{0,2}\s*:\s*\*{0,2}\s*(-?\d+(?:\.\d+)?)\s*\/\s*(-?\d+(?:\.\d+)?)/i
+  const TOTAL_RE = /^\s*\*{0,2}\bTotal\b\*{0,2}\s*:\s*(.*)$/im
+
+  const lines = text.split(/\r?\n/)
+  const parsedCrits: ParsedCritLine[] = []
+  const summaries: string[] = []
+  let currentCrit: ParsedCritLine | null = null
+  let statedGrade: number | null = null
+
+  const gm = text.match(GRADE_RE)
+  if (gm) statedGrade = parseFloat(gm[1])
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const trimmed = line.trim()
+    if (!trimmed) {
+      currentCrit = null
+      continue
+    }
+
+    // Skip Grade, Total, or Feedback header lines
+    if (GRADE_RE.test(trimmed) || TOTAL_RE.test(trimmed) || /^\*{0,2}Feedback:\*{0,2}/i.test(trimmed)) {
+      currentCrit = null
+      continue
+    }
+
+    const m = line.match(CRIT_RE)
+    if (m && (m[1] || m[2].trim())) {
+      const cid = m[1] ? m[1].toUpperCase() : null
+      const name = m[2].trim().replace(/^\*+|\*+$/g, '')
+      const level = m[3].trim()
+      const earned = parseFloat(m[4])
+      const max = parseFloat(m[5])
+      const note = (m[6] || '').trim()
+
+      currentCrit = {
+        cid,
+        name,
+        level: level.charAt(0).toUpperCase() + level.slice(1).toLowerCase(),
+        earned: Number.isFinite(earned) ? earned : 0,
+        max: Number.isFinite(max) ? max : 0,
+        note,
+      }
+      parsedCrits.push(currentCrit)
+      continue
+    }
+
+    // Continuation line for a multi-line criterion explanation
+    if (currentCrit && (line.startsWith(' ') || line.startsWith('\t') || !/^[A-Z0-9#*-]/i.test(trimmed))) {
+      currentCrit.note += (currentCrit.note ? ' ' : '') + trimmed
+      continue
+    }
+
+    currentCrit = null
+    // Collect non-bulleted general remarks as summary
+    if (!trimmed.startsWith('-') && !trimmed.startsWith('*') && !trimmed.startsWith('#') && trimmed.length > 20) {
+      summaries.push(trimmed)
+    }
+  }
+
+  // If neither criterion lines nor headline grade could be found, this is not a Markdown grade
+  if (!parsedCrits.length && statedGrade === null) {
+    return null
+  }
+
+  // Map parsed criteria lines to the rubric criteria
+  const usedIndices = new Set<number>()
+  const criteria: CriterionResult[] = rubric.criteria.map((c, i) => {
+    // 1. Match by C-id (e.g. C1 for criterion index 0)
+    const cidTarget = `C${i + 1}`
+    let matchIdx = parsedCrits.findIndex((p, idx) => !usedIndices.has(idx) && p.cid === cidTarget)
+
+    // 2. Match by criterion name
+    if (matchIdx === -1) {
+      const normC = norm(c.name)
+      matchIdx = parsedCrits.findIndex(
+        (p, idx) => !usedIndices.has(idx) && p.name && (norm(p.name) === normC || norm(p.name).includes(normC) || normC.includes(norm(p.name)))
+      )
+    }
+
+    // 3. Positional fallback if counts align
+    if (matchIdx === -1 && parsedCrits.length === rubric.criteria.length && !usedIndices.has(i)) {
+      matchIdx = i
+    }
+
+    if (matchIdx !== -1) {
+      usedIndices.add(matchIdx)
+      const p = parsedCrits[matchIdx]
+      const earned = Math.max(0, Math.min(c.points, Math.round(p.earned * 2) / 2))
+      return {
+        name: c.name,
+        earned,
+        max: c.points,
+        level: p.level,
+        note: p.note || `Graded as ${p.level}.`,
+      }
+    }
+
+    return {
+      name: c.name,
+      earned: 0,
+      max: c.points,
+      level: 'Not assessed',
+      note: 'The model did not return a score for this criterion. Review it by hand.',
+    }
+  })
+
+  const concerns: string[] = []
+  const missing = criteria.some(c => c.level === 'Not assessed')
+  if (missing) concerns.push('some criteria were not scored')
+
+  const score = criteria.reduce((sum, c) => sum + c.earned, 0)
+  const roundedScore = Math.round(score * 10) / 10
+
+  if (statedGrade !== null && Math.abs(statedGrade - roundedScore) > 0.05) {
+    concerns.push(`stated grade (${statedGrade}) disagrees with criterion sum (${roundedScore})`)
+  }
+
+  // Look for any student identifier mentioned in text
+  const sidMatch = text.match(/\b(?:student\s*(?:id|number|#)?\s*[:=]?\s*)(\d{8,10})\b/i)
+  const studentId = sidMatch ? sidMatch[1] : null
+
+  const summary = summaries.length
+    ? summaries.join(' ')
+    : `${rubric.name}: ${roundedScore}/${rubric.totalPoints} points awarded across ${criteria.length} criteria.`
+
+  let confidence = 90
+  if (missing) confidence = 50
+  else if (concerns.length) confidence = 65
+
+  return {
+    studentName: null,
+    studentId,
+    criteria,
+    score: roundedScore,
+    summary,
+    confidence,
+    concerns,
+  }
+}
+
+/**
+ * Dual Response Normalizer:
+ * Parses a model reply whether it is formatted as structured JSON or as InstructLab Markdown.
+ */
+export function parseAndNormalizeGradeReply(text: string, rubric: Rubric): GradeResult {
+  const cleaned = text
+    .replace(/<think>[\s\S]*?<\/think>/g, '')
+    .replace(/^[\s\S]*<\/think>/, '')
+    .trim()
+
+  // 1. Attempt JSON parsing
+  try {
+    const raw = parseJsonLoose(cleaned)
+    if (raw && typeof raw === 'object') {
+      const hasCriteria = Array.isArray((raw as Record<string, unknown>).criteria)
+      const hasScore = typeof (raw as Record<string, unknown>).score === 'number'
+      if (hasCriteria || hasScore) {
+        return normalizeResult(raw, rubric)
+      }
+    }
+  } catch {
+    // Fall through to Markdown parser
+  }
+
+  // 2. Attempt Markdown parsing
+  const md = parseMarkdownGrade(cleaned, rubric)
+  if (md) return md
+
+  // 3. Last fallback: retry normalizeResult in case parseJsonLoose succeeded with non-standard fields
+  try {
+    const raw = parseJsonLoose(cleaned)
+    if (raw && typeof raw === 'object') {
+      return normalizeResult(raw, rubric)
+    }
+  } catch {
+    // Fall through
+  }
+
+  throw new Error('The model replied, but neither JSON nor Markdown grading could be read.')
 }
 
 export function coerceRubric(o: Record<string, unknown>, fallbackAssignment: string): Omit<Rubric, 'id' | 'createdBy' | 'updatedAt' | 'version'> {
