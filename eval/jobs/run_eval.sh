@@ -24,16 +24,19 @@
 #   sbatch eval/jobs/run_eval.sh          # no ADAPTER: base model only, no comparison
 #   TEST_SET=A ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh   # Group A test set
 #   DATASET=test_set/groupB_60_draft.json ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh  # Group B v3
+#   FT_ONLY=1 ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh -- --template eval-prompt-train-v1
 # Check the setup without a GPU, on a login node:
 #   ADAPTER=models/adapters/<name> bash eval/jobs/run_eval.sh --check
 #
 # Options after -- go to both runs: --test-type, --topic, --question-id, --temperature, --top-p,
-# --max-tokens, --seed, --n-boot, --boot-seed. The job sets everything else itself.
+# --max-tokens, --seed, --n-boot, --boot-seed, --template. The job sets everything else itself.
 #
 # Settings (put them before sbatch):
 #   ADAPTER     the fine-tuned LoRA folder, from training/train_lora.py. Optional. The job never
 #               assumes a grading-skills adapter exists: it checks the folder, and the adapter's
 #               training data is printed so you can confirm it.
+#   FT_ONLY     1: run only the fine-tuned model (needs ADAPTER), with no base run and no comparison.
+#               0 or unset (the default): as before. Any other value stops the job.
 #   TEST_SET    B (default, Group B v4: test_set/groupB_v4_101.json) or A (test_set/groupA_40_final.json,
 #               graded with each case's own general rules)
 #   DATASET     a test set file of that group instead of its default, relative to the repo, e.g.
@@ -73,6 +76,7 @@ DATASET="${DATASET:-}"
 DATASET_SHA256="${DATASET_SHA256:-}"
 BASE_MODEL="${BASE_MODEL:-models/Qwen3.8-27B}"
 ADAPTER="${ADAPTER:-}"
+FT_ONLY="${FT_ONLY:-0}"
 EVAL_OUT="${EVAL_OUT:-$HOME/scratch/gradeai-eval}"
 VENV="${VENV:-env/model/.venv}"
 JOB_TAG="${SLURM_JOB_ID:-local-$(date +%Y%m%d-%H%M%S)}"
@@ -82,6 +86,11 @@ HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-2700}"
 HEALTH_INTERVAL="${HEALTH_INTERVAL:-10}"
 STOP_TIMEOUT="${STOP_TIMEOUT:-20}"
 VLLM_PID=""
+
+case "$FT_ONLY" in
+    0|1) ;;
+    *) echo "ERROR: FT_ONLY must be 0 or 1 (or unset), not '$FT_ONLY'."; exit 1 ;;
+esac
 
 echo "GradeAI evaluation, job $JOB_TAG on $(hostname), started $(date)"
 echo "Test set: Group $TEST_SET${DATASET:+ ($DATASET)}   Base model: $BASE_MODEL   Adapter: ${ADAPTER:-none}   Output: $EVAL_OUT"
@@ -103,6 +112,7 @@ source "$VENV/bin/activate"
 DATASET_ARGS=()
 [ -n "$DATASET" ] && DATASET_ARGS+=(--dataset "$DATASET")
 [ -n "$DATASET_SHA256" ] && DATASET_ARGS+=(--expected-sha256 "$DATASET_SHA256")
+[ "$FT_ONLY" = 1 ] && DATASET_ARGS+=(--fine-tuned-only)
 if ! PREFLIGHT="$(python -m eval.jobs.preflight --base-model "$BASE_MODEL" --adapter "$ADAPTER" \
     --out "$EVAL_OUT" --group "$TEST_SET" "${DATASET_ARGS[@]}" -- "${EVAL_ARGS[@]}")"; then
     exit 1
@@ -178,7 +188,7 @@ fi
 # ---- Start vLLM ---------------------------------------------------------------------------
 LORA_ARGS=()
 WANTED="$BASE_NAME"
-if [ "$MODE" = "base_and_fine_tuned" ]; then
+if [ "$MODE" != "base_only" ]; then
     LORA_ARGS=(--enable-lora --lora-modules "$FT_NAME=$ADAPTER_PATH" --max-lora-rank "$LORA_RANK")
     WANTED="$BASE_NAME $FT_NAME"
 fi
@@ -228,10 +238,12 @@ only_run() {
     echo "${found[0]}"
 }
 
-echo "Base model run, started $(date)"
-python -u eval/run_eval.py --model base --out "$RUN_ROOT/base" --group "$DATASET_GROUP" \
-    "${RUN_DATASET_ARGS[@]}" --endpoint "$ENDPOINT" --base-model "$BASE_MODEL_RECORD" "${EVAL_ARGS[@]}"
-BASE_RUN="$(only_run "$RUN_ROOT/base")"
+if [ "$MODE" != "fine_tuned_only" ]; then
+    echo "Base model run, started $(date)"
+    python -u eval/run_eval.py --model base --out "$RUN_ROOT/base" --group "$DATASET_GROUP" \
+        "${RUN_DATASET_ARGS[@]}" --endpoint "$ENDPOINT" --base-model "$BASE_MODEL_RECORD" "${EVAL_ARGS[@]}"
+    BASE_RUN="$(only_run "$RUN_ROOT/base")"
+fi
 
 if [ "$MODE" = "base_only" ]; then
     echo "Done at $(date). No adapter, so no comparison. Results: $BASE_RUN"
@@ -243,8 +255,12 @@ python -u eval/run_eval.py --model fine_tuned --out "$RUN_ROOT/fine_tuned" --gro
     "${RUN_DATASET_ARGS[@]}" --endpoint "$ENDPOINT" --adapter "$ADAPTER_PATH" "${EVAL_ARGS[@]}"
 FT_RUN="$(only_run "$RUN_ROOT/fine_tuned")"
 
-python -u eval/compare.py --base "$BASE_RUN" --fine-tuned "$FT_RUN" --out "$RUN_ROOT/compare" \
-    "${COMPARE_ARGS[@]}"
+if [ "$MODE" = "fine_tuned_only" ]; then
+    echo "FT_ONLY=1: no base run and no comparison."
+else
+    python -u eval/compare.py --base "$BASE_RUN" --fine-tuned "$FT_RUN" --out "$RUN_ROOT/compare" \
+        "${COMPARE_ARGS[@]}"
+fi
 
 echo "Done at $(date). Results are in $RUN_ROOT"
 if [ -n "$DATASET_LABELS" ]; then

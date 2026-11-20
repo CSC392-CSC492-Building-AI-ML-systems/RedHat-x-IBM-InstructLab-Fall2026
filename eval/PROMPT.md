@@ -79,6 +79,22 @@ These differences are deliberate:
 
 `grading_policies` is neither a grader-visible nor a held-out field in the dataset. Putting it in the prompt is a deliberate addition to question, rubric and answer, and it is recorded in every run config (`general_rules_source`).
 
+## Optional diagnostic template `eval-prompt-train-v1`
+
+`eval-prompt-v3` above is the default and the standard Base-vs-FT comparison, and it is unchanged. `eval-prompt-train-v1` is an optional second template that gives the fine-tuned model the layout it was trained on (`stage2_v2clean_2026-11-15`, checked on Fir 2026-11-20). It is selected only explicitly:
+
+```bash
+python eval/run_eval.py --model fine_tuned --adapter models/adapters/<name> --template eval-prompt-train-v1 ...
+FT_ONLY=1 ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh -- --template eval-prompt-train-v1
+```
+
+What it changes (`TRAIN_*` constants in `prompt.py`):
+- **System message:** `REASONING_PREAMBLE`, a blank line, then the usual system message. Training rendered each example without `enable_thinking`, so the chat template put this sentence before the system message. Evaluation runs with `enable_thinking=False`, where the chat template leaves it out, so this template adds it itself.
+- **User message:** the context, a blank line, `Student Answer:`, then the answer. There is no output-format block, as in training.
+- **Replies:** the template gives no format or order instruction. It does **not** ask for or enforce Grade-first replies; the training replies put the Grade line first, and `parse.py` reads the Grade line in either position, unchanged.
+
+Question, rubric, rules and answer are the dataset's, unchanged, so for Group B the general rules and the Unicode text still differ from training. It is diagnostic, not a replacement: the base model was never trained on this format. Its template hash differs from `eval-prompt-v3`'s, so `compare.py` refuses to compare a run of one template with a run of the other. `FT_ONLY=1` runs only the fine-tuned model, with no base run and no comparison.
+
 ## Keeping the prompt fixed
 
 - `template_hash` covers everything about the prompt except the case itself:
@@ -108,7 +124,10 @@ Text that is also in the visible fields or the rules is allowed, because it reve
 ## Open points
 
 - **Layout check (before any real run):** compare `ANSWER_LAYOUT` with one real `skills_train_msgs` line on Fir. If it differs, change `ANSWER_LAYOUT`, its test and table row 3 above, and give the template a new version. Then set `LAYOUT_VERIFIED = True`. Either change alters `template_hash`.
+  - Checked 2026-11-20 against `stage2_v2clean_2026-11-15`: the training layout is the context, a blank line and `Student Answer:` (no output-format block), and the rendered system turn starts with the reasoning sentence. `eval-prompt-v3` is left as it is (`LAYOUT_VERIFIED = False`) so that its hash and earlier results are unchanged; the training layout is the separate template `eval-prompt-train-v1` above.
 ## Change log
+
+- **2026-11-20: optional template `eval-prompt-train-v1`.** Selected with `run_eval.py --template eval-prompt-train-v1` (in the job: `-- --template eval-prompt-train-v1`); the job also has `FT_ONLY=1`. `eval-prompt-v3` is unchanged and still the default: same prompts, `template_hash` and run-config entry.
 
 - **2026-11-19: Group B v4 is the default.** With no `--dataset`, Group B runs use `test_set/groupB_v4_101.json` (SHA-256 `24d7f3bf5d2862641871796f6b16b4e672d4c2ea97e5176bbbaf2ade082ed4ca`, 101 cases). The template is unchanged (`eval-prompt-v3`, same `template_hash`), and the prompts of the 60 cases carried over from v3 are byte-identical to v3's. Runs on v4 and v3 still can't be compared, because their dataset hashes differ. v3 (`ecd69def…`) is run with `--dataset test_set/groupB_60_draft.json`, and `--rescore` re-scores each run against the file and hash in its own config.
 - **2026-11-17: Group A support.** `--group A` (job: `TEST_SET=A`) evaluates `test_set/groupA_40_final.json` (SHA-256 `226fb91602ed06d3192b495a4ab2085553e3ee41fa1745c3337de4f0dcab81cc`) with each case's own `general_rules`. Group B prompts, `template_hash` and run configs are unchanged byte for byte (pinned in `eval/tests/test_group_a.py`). The leak guard now also checks every text of 20 or more characters in held-out fields; no Group B prompt is affected.

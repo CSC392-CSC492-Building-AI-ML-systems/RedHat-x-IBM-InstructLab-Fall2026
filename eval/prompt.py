@@ -10,6 +10,9 @@ Group B's dataset-level grading_policies, or a Group A case's own general_rules 
 The student answer is used verbatim, never cleaned up: some answers contain errors, injection text or
 fake grades on purpose.
 
+eval-prompt-v3 is the default. eval-prompt-train-v1 (chosen with run_eval.py --template) is an optional,
+diagnostic template with the layout the stage-2 adapter was trained on; see eval/PROMPT.md.
+
 To print the exact prompt for one case (the group follows from the test_id):
     python -m eval.prompt csc236_B_cind_01_ans01
     python -m eval.prompt csc236_A_regex_04_a06
@@ -88,6 +91,20 @@ ANSWER_LABEL = "Student Answer:"
 ANSWER_LAYOUT = "{context}\n{output_format}\n\n" + ANSWER_LABEL + "\n{student_answer}"
 LAYOUT_VERIFIED = False
 
+# Optional diagnostic template: the stage2_v2clean_2026-11-15 training layout, checked on Fir 2026-11-20.
+# Training rendered every example without enable_thinking, so the chat template put REASONING_PREAMBLE
+# and a blank line before the system message; evaluation runs with enable_thinking=False, where the
+# chat template leaves it out, so this template puts it in the system message itself. The user message
+# is the context, a blank line, "Student Answer:" and the answer, with no output-format block. Nothing
+# asks for a reply order (the training replies put the Grade line first; parse.py reads either order).
+TRAIN_TEMPLATE_VERSION = "eval-prompt-train-v1"
+TEMPLATES = (TEMPLATE_VERSION, TRAIN_TEMPLATE_VERSION)
+REASONING_PREAMBLE = ("Reasoning effort is set to xhigh. Please think carefully through the task, validate key "
+                      "assumptions, consider plausible alternatives, and prioritize correctness, consistency, "
+                      "and clarity in the final answer.")
+TRAIN_SYSTEM = REASONING_PREAMBLE + "\n\n" + SYSTEM
+TRAIN_ANSWER_LAYOUT = "{context}\n\n" + ANSWER_LABEL + "\n{student_answer}"
+
 # Held-out fields whose text must never appear in a prompt, whatever its length. topic, test_type,
 # group and review_status are left out: they are common words ("recurrences") that can appear in a
 # rubric or in the grading rules without anything leaking.
@@ -124,21 +141,26 @@ def render_output_format(rubric: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def build_user_message(grader_fields: dict, general_rules: list[str]) -> str:
+def build_user_message(grader_fields: dict, general_rules: list[str], template: str = TEMPLATE_VERSION) -> str:
     if set(grader_fields) != set(dataset.GRADER_VISIBLE):
         raise PromptError(f"the prompt takes exactly {list(dataset.GRADER_VISIBLE)}, "
                           f"got {sorted(grader_fields)}")
     context = render_context({"question": grader_fields["question"],
                               "criteria": grader_fields["rubric"],
                               "general_rules": general_rules})
+    if template == TRAIN_TEMPLATE_VERSION:
+        return TRAIN_ANSWER_LAYOUT.format(context=context, student_answer=grader_fields["student_answer"])
     return ANSWER_LAYOUT.format(context=context, output_format=render_output_format(grader_fields["rubric"]),
                                 student_answer=grader_fields["student_answer"])
 
 
-def build_messages(grader_fields: dict, general_rules: list[str]) -> list[dict]:
+def build_messages(grader_fields: dict, general_rules: list[str], template: str = TEMPLATE_VERSION) -> list[dict]:
     """The chat messages sent to either model. Nothing here depends on which model is graded."""
-    return [{"role": "system", "content": SYSTEM},
-            {"role": "user", "content": build_user_message(grader_fields, general_rules)}]
+    if template not in TEMPLATES:
+        raise PromptError(f"unknown prompt template {template!r}; choose from {list(TEMPLATES)}")
+    system = TRAIN_SYSTEM if template == TRAIN_TEMPLATE_VERSION else SYSTEM
+    return [{"role": "system", "content": system},
+            {"role": "user", "content": build_user_message(grader_fields, general_rules, template)}]
 
 
 def short_question_id(question_id: str) -> str:
@@ -183,9 +205,9 @@ def check_no_leak(messages: list[dict], case: dict, general_rules: list[str]) ->
             raise LeakError(f"{case['test_id']}: held-out text appears in the prompt: {s[:80]!r}")
 
 
-def messages_for_case(ds: dataset.Dataset, case: dict) -> list[dict]:
+def messages_for_case(ds: dataset.Dataset, case: dict, template: str = TEMPLATE_VERSION) -> list[dict]:
     rules = ds.general_rules(case)
-    messages = build_messages(dataset.grader_input(case), rules)
+    messages = build_messages(dataset.grader_input(case), rules, template)
     check_no_leak(messages, case, rules)
     return messages
 
@@ -195,7 +217,8 @@ def messages_sha256(messages: list[dict]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def template_hash(general_rules: list[str], rules_source: str = dataset.RULES_DATASET) -> str:
+def template_hash(general_rules: list[str], rules_source: str = dataset.RULES_DATASET,
+                  template: str = TEMPLATE_VERSION) -> str:
     """Changes whenever anything that shapes the prompt changes, apart from the case itself.
 
     With per-case rules (Group A) the rules are part of each case, like its rubric: pass [] and
@@ -213,35 +236,41 @@ def template_hash(general_rules: list[str], rules_source: str = dataset.RULES_DA
         "wrap": WRAP,
         "levels": LEVELS,
     }
+    if template == TRAIN_TEMPLATE_VERSION:  # eval-prompt-v3 keeps exactly the parts above
+        parts.update({"version": TRAIN_TEMPLATE_VERSION, "system": TRAIN_SYSTEM,
+                      "answer_layout": TRAIN_ANSWER_LAYOUT, "layout_verified": True})
+    elif template != TEMPLATE_VERSION:
+        raise PromptError(f"unknown prompt template {template!r}; choose from {list(TEMPLATES)}")
     if rules_source != dataset.RULES_DATASET:  # leaves the Group B hash as it was
         parts["general_rules_source"] = rules_source
     canonical = json.dumps(parts, ensure_ascii=False, sort_keys=True)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def dataset_template_hash(ds: dataset.Dataset) -> str:
+def dataset_template_hash(ds: dataset.Dataset, template: str = TEMPLATE_VERSION) -> str:
     if ds.group.rules_source == dataset.RULES_CASE:
-        return template_hash([], dataset.RULES_CASE)
-    return template_hash(ds.grading_policies)
+        return template_hash([], dataset.RULES_CASE, template)
+    return template_hash(ds.grading_policies, template=template)
 
 
-def describe(ds: dataset.Dataset) -> dict:
+def describe(ds: dataset.Dataset, template: str = TEMPLATE_VERSION) -> dict:
     """What a run config records about the prompt."""
+    verified = True if template == TRAIN_TEMPLATE_VERSION else LAYOUT_VERIFIED
     if ds.group.rules_source == dataset.RULES_CASE:
         rule_sets = {json.dumps(ds.general_rules(c), ensure_ascii=False) for c in ds.cases}
-        return {"template_version": TEMPLATE_VERSION, "template_sha256": dataset_template_hash(ds),
-                "layout_verified": LAYOUT_VERIFIED, "general_rules_source": dataset.RULES_CASE,
+        return {"template_version": template, "template_sha256": dataset_template_hash(ds, template),
+                "layout_verified": verified, "general_rules_source": dataset.RULES_CASE,
                 "general_rules_distinct_sets": len(rule_sets)}
-    return {"template_version": TEMPLATE_VERSION, "template_sha256": template_hash(ds.grading_policies),
-            "layout_verified": LAYOUT_VERIFIED, "general_rules_source": dataset.RULES_DATASET,
+    return {"template_version": template, "template_sha256": template_hash(ds.grading_policies, template=template),
+            "layout_verified": verified, "general_rules_source": dataset.RULES_DATASET,
             "general_rules_count": len(ds.grading_policies)}
 
 
-def build_prompts(ds: dataset.Dataset) -> list[dict]:
+def build_prompts(ds: dataset.Dataset, template: str = TEMPLATE_VERSION) -> list[dict]:
     """One record per case, in dataset order: {test_id, messages, prompt_sha256}."""
     records = []
     for case in ds.cases:
-        messages = messages_for_case(ds, case)
+        messages = messages_for_case(ds, case, template)
         records.append({"test_id": case["test_id"], "messages": messages,
                         "prompt_sha256": messages_sha256(messages)})
     return records

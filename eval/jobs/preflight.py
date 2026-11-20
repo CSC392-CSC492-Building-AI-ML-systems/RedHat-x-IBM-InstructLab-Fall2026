@@ -14,7 +14,8 @@ Checks:
 - that the output folder is outside the repo;
 - that the extra run_eval.py options are ones the job may pass on, with valid values.
 
-The adapter is optional: without one, the job runs the base model only. Every problem is listed,
+The adapter is optional: without one, the job runs the base model only. With --fine-tuned-only
+(the job's FT_ONLY=1) it is required, and only the fine-tuned model is run. Every problem is listed,
 then the script exits 1. On success it prints shell assignments for the job script to `eval`, with
 every value quoted.
 """
@@ -38,7 +39,7 @@ WEIGHTS = ("adapter_model.safetensors", "adapter_model.bin")
 # run_eval.py options the job may pass on to both runs. The job sets the rest itself, so that
 # both models get the same prompts, outputs and server.
 PASSTHROUGH = ("--test-type", "--topic", "--question-id", "--temperature", "--top-p", "--max-tokens",
-               "--seed", "--n-boot", "--boot-seed")
+               "--seed", "--n-boot", "--boot-seed", "--template")
 
 
 def resolve(path: str, repo: Path) -> Path:
@@ -132,10 +133,15 @@ def check_adapter(adapter: Path, base_model: str, base_resolved: Path, repo: Pat
 
 def check(repo: Path, base_model: str, adapter: str | None, out: str, run_args: list[str],
           group: str = "B", dataset_path: str | None = None,
-          expected_sha256: str | None = None) -> tuple[list[str], dict, list[str]]:
+          expected_sha256: str | None = None, fine_tuned_only: bool = False) -> tuple[list[str], dict, list[str]]:
     problems, warnings = [], []
+    mode = "base_and_fine_tuned" if adapter else "base_only"
+    if fine_tuned_only:
+        mode = "fine_tuned_only"
+        if not adapter:
+            problems.append("FT_ONLY=1 runs the fine-tuned model only, so it needs ADAPTER")
     info = {"REPO": str(repo), "BASE_MODEL_RECORD": base_model, "BASE_NAME": backends.SERVED_MODELS["base"],
-            "FT_NAME": backends.SERVED_MODELS["fine_tuned"], "MODE": "base_and_fine_tuned" if adapter else "base_only"}
+            "FT_NAME": backends.SERVED_MODELS["fine_tuned"], "MODE": mode}
 
     if not (repo / "eval" / "run_eval.py").exists():
         problems.append(f"{repo} is not the repo folder (no eval/run_eval.py); submit the job from the repo folder")
@@ -177,7 +183,7 @@ def check(repo: Path, base_model: str, adapter: str | None, out: str, run_args: 
         p, i, w = check_adapter(adapter_resolved, base_model, base_resolved, repo)
         problems, warnings = problems + p, warnings + w
         info.update(i)
-    else:
+    elif not fine_tuned_only:
         warnings.append("no ADAPTER given: only the base model will be evaluated, with no comparison")
 
     out_resolved = resolve(out, Path.cwd())
@@ -202,11 +208,13 @@ def main(argv=None) -> int:
     p.add_argument("--group", default="B", help="test set: B (default) or A")
     p.add_argument("--dataset", default="", help="test set file instead of the group's (relative to the repo)")
     p.add_argument("--expected-sha256", default="", help="its SHA-256 (default: a pinned file's own, else the group's)")
+    p.add_argument("--fine-tuned-only", action="store_true", help="run only the fine-tuned model (FT_ONLY=1)")
     p.add_argument("run_args", nargs="*", help="run_eval.py options for both runs (after --)")
     args = p.parse_args(argv)
     problems, info, warnings = check(Path(args.repo).resolve(), args.base_model, args.adapter or None, args.out,
                                      args.run_args, group=args.group, dataset_path=args.dataset or None,
-                                     expected_sha256=args.expected_sha256 or None)
+                                     expected_sha256=args.expected_sha256 or None,
+                                     fine_tuned_only=args.fine_tuned_only)
     for w in warnings:
         print(f"Note: {w}", file=sys.stderr)
     if problems:

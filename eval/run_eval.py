@@ -28,6 +28,9 @@ run's model.
 Output folders must be outside the repo, including through symlinks: the outputs contain
 test-set text.
 
+The prompt template is eval-prompt-v3 unless --template eval-prompt-train-v1 is given (a diagnostic
+template with the stage-2 training layout; eval/PROMPT.md).
+
 Re-score a finished run with the current parser and metrics, without a model:
 
     python eval/run_eval.py --rescore runs/<run folder>
@@ -169,10 +172,11 @@ def read_replies(path: Path) -> list[backends.Generation]:
 
 # --------------------------------------------------------------------------- prompts
 
-def write_prompts(ds: dataset.Dataset, selection: dataset.Selection, run_dir: Path) -> tuple[dict, dict]:
+def write_prompts(ds: dataset.Dataset, selection: dataset.Selection, run_dir: Path,
+                  template: str = prompt.TEMPLATE_VERSION) -> tuple[dict, dict]:
     """Build the prompts for the run's cases and save them, complete, to prompts.jsonl."""
     wanted = {i.test_id for i in selection.items}
-    records = [r for r in prompt.build_prompts(ds) if r["test_id"] in wanted]
+    records = [r for r in prompt.build_prompts(ds, template) if r["test_id"] in wanted]
     path = run_dir / PROMPTS
     write_jsonl(path, records)
     return ({r["test_id"]: r["messages"] for r in records},
@@ -278,7 +282,7 @@ def run(args, client=None) -> tuple[Path, int]:
     check_out_dir(out)
     out.mkdir(parents=True, exist_ok=True)
     run_dir = new_run_dir(out, args.model)
-    messages, prompts_file = write_prompts(ds, selection, run_dir)
+    messages, prompts_file = write_prompts(ds, selection, run_dir, args.template)
 
     warnings = []
     if decoding.temperature != 0:
@@ -290,7 +294,7 @@ def run(args, client=None) -> tuple[Path, int]:
         "provisional": True,
         "labels_note": dataset.labels_note(ds.describe()),
         "dataset": ds.describe(),
-        "prompt": prompt.describe(ds),
+        "prompt": prompt.describe(ds, args.template),
         "prompts_file": prompts_file,
         "model": {"role": args.model, "served_model": served_model,
                   "base_model": args.base_model, "adapter": adapter_info(args.adapter)},
@@ -398,6 +402,9 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--test-type", type=csv, help="comma-separated: " + ",".join(dataset.TEST_TYPES))
     p.add_argument("--topic", type=csv, help="comma-separated topics")
     p.add_argument("--question-id", type=csv, help="comma-separated question ids")
+    p.add_argument("--template", choices=prompt.TEMPLATES, default=prompt.TEMPLATE_VERSION,
+                   help=f"prompt template (default {prompt.TEMPLATE_VERSION}; "
+                        f"{prompt.TRAIN_TEMPLATE_VERSION} is diagnostic, eval/PROMPT.md)")
     p.add_argument("--endpoint", help="vLLM server, e.g. http://localhost:8000/v1")
     p.add_argument("--served-model", help="override the served model name")
     p.add_argument("--adapter", help="adapter folder, recorded with its settings.yaml")

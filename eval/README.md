@@ -24,7 +24,10 @@ ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh            # base, f
 sbatch eval/jobs/run_eval.sh -- --test-type paraphrase,sensitivity     # options go to both runs
 TEST_SET=A ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh # Group A test set
 DATASET=test_set/groupB_60_draft.json ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh  # Group B v3
+FT_ONLY=1 ADAPTER=models/adapters/<name> sbatch eval/jobs/run_eval.sh -- --template eval-prompt-train-v1  # diagnostic
 ```
+
+The prompt template is `eval-prompt-v3` (the default and the standard comparison) unless `--template eval-prompt-train-v1` is given: an optional diagnostic template with the fine-tuned model's training layout, which does not ask for or enforce any reply format. Runs of different templates can't be compared. `FT_ONLY=1` runs only the fine-tuned model, with no comparison. See [`PROMPT.md`](PROMPT.md#optional-diagnostic-template-eval-prompt-train-v1).
 
 By hand, with a vLLM server already running:
 
@@ -113,3 +116,5 @@ Unchanged: the remaining CLI options, the run-folder layout (`config.json`, `pro
 **Prompt `eval-prompt-v2` (2026-11-02):** adds an explicit output-format block; see `PROMPT.md`. Runs made with v1 can't be compared with v2 runs.
 
 **Prompt `eval-prompt-v3` (2026-11-02):** puts the Grade line last and states that it must equal the sum of the criterion points; see `PROMPT.md`. Runs made with v2 can't be compared with v3 runs by `compare.py`.
+
+**Optional prompt `eval-prompt-train-v1` (2026-11-20):** selected with `--template`; `eval-prompt-v3` is unchanged and remains the default. The job gains `FT_ONLY=1`. See `PROMPT.md`.
