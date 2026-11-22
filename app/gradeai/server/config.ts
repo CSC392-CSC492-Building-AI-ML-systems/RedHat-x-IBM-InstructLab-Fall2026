@@ -24,6 +24,10 @@ export const config = {
   leaseSec: num(process.env.TASK_LEASE_SEC, 600),
   maxAttempts: num(process.env.TASK_MAX_ATTEMPTS, 3),
   staticDir: path.resolve(process.env.STATIC_DIR || './dist'),
+  /** Gemini API key for VLM-based OCR. When set, Gemini is used instead of Tesseract. */
+  geminiApiKey: process.env.GEMINI_API_KEY || '',
+  /** Gemini model to use for OCR. Defaults to gemini-2.0-flash. */
+  geminiOcrModel: process.env.GEMINI_OCR_MODEL || 'gemini-2.0-flash',
 }
 
 export const STAFF = new Set(['professor', 'admin'])

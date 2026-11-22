@@ -155,8 +155,12 @@ export default function Settings() {
               <Field id="s-maxchars" label="Max submission length" value={String(form.maxInputChars)} onChange={v => set('maxInputChars', Math.max(1000, Number(v.replace(/\D/g, '')) || 0))} disabled={fieldsDisabled} suffix="characters" />
               <div className="text-[11px] mt-1 leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>Longer files are cut and flagged for review. Keep this near 3 × the job's MAX_MODEL_LEN.</div>
             </div>
-            <div className="text-[11px]" style={{ color: ocr.tesseract ? 'var(--muted-foreground)' : '#b45309' }}>
-              {ocr.tesseract ? 'Scanned and photographed work is read on this server with Tesseract OCR.' : 'Tesseract OCR is not installed on the server, so scanned submissions will fail. Install tesseract-ocr and poppler-utils.'}
+            <div className="text-[11px]" style={{ color: ocr.backend === 'gemini' || ocr.tesseract ? 'var(--muted-foreground)' : '#b45309' }}>
+              {ocr.backend === 'gemini'
+                ? 'Scanned and photographed work is transcribed using the Gemini VLM.'
+                : ocr.tesseract
+                ? 'Scanned and photographed work is read on this server with Tesseract OCR.'
+                : 'OCR is not configured on the server (set GEMINI_API_KEY in .env or install tesseract-ocr and poppler-utils).'}
             </div>
           </Section>
 

@@ -10,7 +10,7 @@ import {
 } from './auth'
 import { docDelete, docGet, docList, docPatch, docSet, docsRouter } from './docs'
 import { addClient, disconnectUser } from './events'
-import { ocrFile, ocrTools } from './ocr'
+import { ocrFileAuto, ocrTools, ocrBackend } from './ocr'
 import {
   cancelBatch, checkBatch, claim, complete, release, dropTasksFor, enqueueGrade, heartbeat, importRubric, logActivity, modelStatus, settings, startMaintenance,
 } from './queue'
@@ -125,7 +125,7 @@ api.post('/invite/:token', (req, res) => {
   res.json({ ok: true })
 })
 
-api.get('/me', (req, res) => { res.json({ user: req.user ?? null, ocr: ocrTools }) })
+api.get('/me', (req, res) => { res.json({ user: req.user ?? null, ocr: { ...ocrTools, backend: ocrBackend } }) })
 
 api.post('/me/password', requireUser, (req, res) => {
   const row = db.prepare('SELECT pw_hash FROM users WHERE id = ?').get(req.user!.id) as { pw_hash: string }
@@ -256,7 +256,7 @@ api.post('/uploads', upload.any(), async (req, res) => {
 
   for (const o of toOcr) {
     try {
-      const text = await ocrFile(o.file, o.kind)
+      const text = await ocrFileAuto(o.file, o.kind)
       if (!text.replace(/--- Page \d+ ---/g, '').trim()) throw new Error('No readable text was found on the scanned pages.')
       docSet(`submissionContent/${o.id}`, { text })
       enqueueGrade(o.id)

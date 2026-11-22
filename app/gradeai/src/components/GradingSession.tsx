@@ -80,7 +80,8 @@ export default function GradingSession({ setActiveView }: { setActiveView: (v: V
       })
       if (next.length < prepared.length) notify(`${prepared.length - next.length} duplicate file(s) skipped.`, 'warn')
       const scans = next.filter(f => (f.kind === 'scan' || f.kind === 'image') && !f.error).length
-      if (scans && !ocr.tesseract) notify(`${scans} scanned file(s) need OCR, which isn't installed on the server. They will fail until an admin installs Tesseract.`, 'warn')
+      const hasOcr = ocr.backend === 'gemini' || ocr.tesseract
+      if (scans && !hasOcr) notify(`${scans} scanned file(s) need OCR, which isn't configured on the server. Set GEMINI_API_KEY in .env or install Tesseract.`, 'warn')
       setStaged(list => [...list, ...next])
     } finally {
       setReading(false)

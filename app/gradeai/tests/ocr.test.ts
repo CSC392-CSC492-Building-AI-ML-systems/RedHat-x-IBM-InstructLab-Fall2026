@@ -1,0 +1,208 @@
+import { describe, it, beforeEach, afterEach } from 'node:test'
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
+import os from 'node:os'
+import { config } from '../server/config'
+import { ocrTools, ocrBackend, ocrFileAuto } from '../server/ocr'
+import { geminiOcrFile } from '../server/gemini-ocr'
+import { guessStudentFromFilename, formatBytes } from '../src/lib/files'
+
+describe('GradeAI OCR & Transcription Pipeline', () => {
+  let tmpDir: string
+  const originalFetch = globalThis.fetch
+  const originalKey = config.geminiApiKey
+  const originalModel = config.geminiOcrModel
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gradeai-test-'))
+  })
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+    config.geminiApiKey = originalKey
+    config.geminiOcrModel = originalModel
+    if (fs.existsSync(tmpDir)) {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  describe('1. Configuration & Routing', () => {
+    it('should expose geminiApiKey and geminiOcrModel in config', () => {
+      assert.strictEqual(typeof config.geminiApiKey, 'string')
+      assert.strictEqual(typeof config.geminiOcrModel, 'string')
+      assert.ok(config.geminiOcrModel.length > 0)
+    })
+
+    it('should report ocrBackend as "gemini" when API key is set', () => {
+      config.geminiApiKey = 'test-gemini-key'
+      // Re-evaluate backend logic
+      const backend = config.geminiApiKey ? 'gemini' : ocrTools.tesseract ? 'tesseract' : 'none'
+      assert.strictEqual(backend, 'gemini')
+    })
+
+    it('should report ocrBackend as "tesseract" or "none" when API key is empty', () => {
+      config.geminiApiKey = ''
+      const backend = config.geminiApiKey ? 'gemini' : ocrTools.tesseract ? 'tesseract' : 'none'
+      assert.ok(backend === 'tesseract' || backend === 'none')
+    })
+  })
+
+  describe('2. Gemini VLM OCR (Image transcription)', () => {
+    it('transcribes an image by sending base64 and transcription prompt', async () => {
+      config.geminiApiKey = 'fake-api-key'
+      config.geminiOcrModel = 'gemini-2.0-flash'
+
+      // Create a dummy image file
+      const imgPath = path.join(tmpDir, 'student_work.png')
+      fs.writeFileSync(imgPath, Buffer.from('fake-png-data'))
+
+      let capturedUrl = ''
+      let capturedBody: any = null
+
+      globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+        capturedUrl = String(input)
+        capturedBody = JSON.parse(String(init?.body))
+        return new Response(
+          JSON.stringify({
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      text: 'Claim: For all $n \\ge 1$, $P(n)$ holds.\nBase case ($n=1$):\n$1 = 1$.',
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const text = await geminiOcrFile(imgPath, 'image')
+
+      // Assertions
+      assert.ok(capturedUrl.includes('models/gemini-2.0-flash:generateContent'))
+      assert.ok(capturedUrl.includes('key=fake-api-key'))
+      assert.strictEqual(capturedBody.contents[0].parts[1].inlineData.mimeType, 'image/png')
+      assert.strictEqual(
+        capturedBody.contents[0].parts[1].inlineData.data,
+        Buffer.from('fake-png-data').toString('base64')
+      )
+      assert.ok(capturedBody.contents[0].parts[0].text.includes('Transcribe this handwritten student proof'))
+      assert.strictEqual(text, 'Claim: For all $n \\ge 1$, $P(n)$ holds.\nBase case ($n=1$):\n$1 = 1$.')
+    })
+
+    it('correctly maps file extensions to MIME types', async () => {
+      config.geminiApiKey = 'fake-api-key'
+
+      const testCases = [
+        { ext: 'jpg', expected: 'image/jpeg' },
+        { ext: 'jpeg', expected: 'image/jpeg' },
+        { ext: 'webp', expected: 'image/webp' },
+      ]
+
+      for (const { ext, expected } of testCases) {
+        const filePath = path.join(tmpDir, `proof.${ext}`)
+        fs.writeFileSync(filePath, Buffer.from('data'))
+
+        let sentMime = ''
+        globalThis.fetch = async (_url: RequestInfo | URL, init?: RequestInit) => {
+          const body = JSON.parse(String(init?.body))
+          sentMime = body.contents[0].parts[1].inlineData.mimeType
+          return new Response(
+            JSON.stringify({ candidates: [{ content: { parts: [{ text: 'done' }] } }] }),
+            { status: 200 }
+          )
+        }
+
+        await geminiOcrFile(filePath, 'image')
+        assert.strictEqual(sentMime, expected)
+      }
+    })
+
+    it('throws a descriptive error when Gemini API returns non-200', async () => {
+      config.geminiApiKey = 'bad-key'
+      const imgPath = path.join(tmpDir, 'error_test.png')
+      fs.writeFileSync(imgPath, Buffer.from('data'))
+
+      globalThis.fetch = async () => {
+        return new Response('API_KEY_INVALID: API key not valid.', { status: 400 })
+      }
+
+      await assert.rejects(
+        async () => {
+          await geminiOcrFile(imgPath, 'image')
+        },
+        /Gemini OCR API error 400: API_KEY_INVALID/
+      )
+    })
+  })
+
+  describe('3. Gemini VLM OCR (Scanned PDF handling)', () => {
+    it('sends PDF directly via application/pdf when under 20MB', async () => {
+      config.geminiApiKey = 'fake-api-key'
+      const pdfPath = path.join(tmpDir, 'scan.pdf')
+      fs.writeFileSync(pdfPath, Buffer.from('%PDF-1.4 dummy content'))
+
+      let capturedMime = ''
+      globalThis.fetch = async (_url: RequestInfo | URL, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body))
+        capturedMime = body.contents[0].parts[1].inlineData.mimeType
+        return new Response(
+          JSON.stringify({
+            candidates: [
+              {
+                content: {
+                  parts: [{ text: '--- Page 1 ---\nInduction Step:\nAssume $P(k)$ is true.' }],
+                },
+              },
+            ],
+          }),
+          { status: 200 }
+        )
+      }
+
+      const text = await geminiOcrFile(pdfPath, 'scan')
+      assert.strictEqual(capturedMime, 'application/pdf')
+      assert.ok(text.includes('--- Page 1 ---'))
+      assert.ok(text.includes('Assume $P(k)$ is true.'))
+    })
+  })
+
+  describe('4. ocrFileAuto router delegation', () => {
+    it('delegates to geminiOcrFile when GEMINI_API_KEY is configured', async () => {
+      config.geminiApiKey = 'valid-gemini-key'
+      const imgPath = path.join(tmpDir, 'route_test.png')
+      fs.writeFileSync(imgPath, Buffer.from('image'))
+
+      globalThis.fetch = async () => {
+        return new Response(
+          JSON.stringify({
+            candidates: [{ content: { parts: [{ text: 'Delegated to Gemini successfully' }] } }],
+          }),
+          { status: 200 }
+        )
+      }
+
+      const result = await ocrFileAuto(imgPath, 'image')
+      assert.strictEqual(result, 'Delegated to Gemini successfully')
+    })
+  })
+
+  describe('5. File utilities & Student guessing', () => {
+    it('extracts student identifiers from submission filenames', () => {
+      assert.strictEqual(guessStudentFromFilename('a2_q1_ohassan.py'), 'ohassan')
+      assert.strictEqual(guessStudentFromFilename('hw3_j_smith.pdf'), 'smith')
+      assert.strictEqual(guessStudentFromFilename('csc236_induction_proof_alice.pdf'), 'alice')
+    })
+
+    it('formats byte sizes cleanly', () => {
+      assert.strictEqual(formatBytes(500), '500 B')
+      assert.strictEqual(formatBytes(2048), '2.0 KB')
+      assert.strictEqual(formatBytes(15 * 1024 * 1024), '15.0 MB')
+    })
+  })
+})

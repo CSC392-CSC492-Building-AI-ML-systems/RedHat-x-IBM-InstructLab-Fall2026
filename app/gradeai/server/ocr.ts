@@ -35,3 +35,25 @@ export async function ocrFile(file: string, kind: 'scan' | 'image', maxPages = 1
     fs.rmSync(dir, { recursive: true, force: true })
   }
 }
+
+import { geminiOcrFile } from './gemini-ocr'
+import { config } from './config'
+
+/**
+ * Primary OCR entry point.
+ * Delegates to Gemini when GEMINI_API_KEY is set; falls back to Tesseract otherwise.
+ * The original ocrFile() and ocrTools remain exported and unchanged.
+ */
+export async function ocrFileAuto(file: string, kind: 'scan' | 'image', maxPages = 12): Promise<string> {
+  if (config.geminiApiKey) {
+    console.log(`[OCR] Using Gemini (${config.geminiOcrModel}) for ${path.basename(file)}`)
+    return geminiOcrFile(file, kind, maxPages)
+  }
+  console.log(`[OCR] Using Tesseract for ${path.basename(file)}`)
+  return ocrFile(file, kind, maxPages)
+}
+
+/** Which OCR backend is currently active (reported to the UI via /api/me). */
+export const ocrBackend: 'gemini' | 'tesseract' | 'none' =
+  config.geminiApiKey ? 'gemini' : ocrTools.tesseract ? 'tesseract' : 'none'
+

@@ -32,7 +32,7 @@ interface Ctx {
   users: Member[]
   refreshUsers: () => Promise<void>
   model: ModelStatus
-  ocr: { tesseract: boolean; pdftoppm: boolean }
+  ocr: { tesseract: boolean; pdftoppm: boolean; backend?: 'gemini' | 'tesseract' | 'none' }
   lastSeenActivity: number
   markActivitySeen: () => void
   toasts: Toast[]
