@@ -3,6 +3,9 @@ import { personName, useApp, usePeople, usePerms } from '../context'
 import type { CriterionResult, Submission } from '../lib/types'
 import { confColor, fmtScore, longDate, relTime, scoreColor } from '../lib/format'
 import { Bar, Button, Confirm, Label, Modal, Notice, Spinner, StatusBadge } from './ui'
+import DocumentViewer from './DocumentViewer'
+
+type FileViewMode = 'split' | 'original' | 'text'
 
 export default function ReviewModal({ id, onClose }: { id: string | null; onClose: () => void }) {
   const app = useApp()
@@ -10,6 +13,9 @@ export default function ReviewModal({ id, onClose }: { id: string | null; onClos
   const perms = usePerms()
   const sub = submissions.find(s => s.id === id) ?? null
   const [tab, setTab] = useState<'feedback' | 'file'>('feedback')
+  const [fileView, setFileView] = useState<FileViewMode>('split')
+  const [splitFeedback, setSplitFeedback] = useState(false)
+  const [splitPaneTab, setSplitPaneTab] = useState<'original' | 'text'>('original')
   const [draft, setDraft] = useState<Submission | null>(null)
   const [content, setContent] = useState<string | null>(null)
   const [busy, setBusy] = useState<'' | 'save' | 'regrade'>('')
@@ -19,6 +25,9 @@ export default function ReviewModal({ id, onClose }: { id: string | null; onClos
   useEffect(() => {
     setDraft(sub ? structuredClone(sub) : null)
     setTab('feedback')
+    setFileView('split')
+    setSplitFeedback(false)
+    setSplitPaneTab('original')
     setContent(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
@@ -30,8 +39,9 @@ export default function ReviewModal({ id, onClose }: { id: string | null; onClos
   }, [sub?.updatedAt])
 
   useEffect(() => {
-    if (tab === 'file' && content === null && id) getContent(id).then(setContent).catch(() => setContent(''))
-  }, [tab, content, id, getContent])
+    const needsText = tab === 'file' || (tab === 'feedback' && splitFeedback && splitPaneTab === 'text')
+    if (needsText && content === null && id) getContent(id).then(setContent).catch(() => setContent(''))
+  }, [tab, splitFeedback, splitPaneTab, content, id, getContent])
 
   if (!id || !sub || !draft) return null
 
@@ -39,6 +49,9 @@ export default function ReviewModal({ id, onClose }: { id: string | null; onClos
   const rubric = rubrics.find(r => r.id === sub.rubricId)
   const draftScore = draft.criteria.length ? draft.criteria.reduce((a, c) => a + (Number(c.earned) || 0), 0) : draft.score
   const isDirty = dirty(sub, draft)
+  const hasVisualFile = Boolean(sub.storedFile && (sub.fileKind === 'image' || sub.fileKind === 'scan' || sub.fileKind === 'pdf'))
+  const isSplit = hasVisualFile && ((tab === 'feedback' && splitFeedback) || (tab === 'file' && fileView === 'split'))
+  const modalWidth = isSplit ? 1180 : hasVisualFile && tab === 'file' ? 920 : 760
 
   function setCrit(i: number, p: Partial<CriterionResult>) {
     setDraft(d => d && ({ ...d, criteria: d.criteria.map((c, j) => (j === i ? { ...c, ...p } : c)) }))
@@ -86,12 +99,119 @@ export default function ReviewModal({ id, onClose }: { id: string | null; onClos
   const input = 'w-full px-3 py-2 text-sm rounded outline-none'
   const inputStyle = { background: 'var(--muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }
 
+  function renderTextPane(maxHeightClass = 'max-h-[520px]') {
+    if (content === null) {
+      return <div className="flex items-center gap-2 text-xs py-6" style={{ color: 'var(--muted-foreground)' }}><Spinner size={12} /> Loading…</div>
+    }
+    if (content) {
+      return (
+        <pre className={`submission text-[11px] leading-relaxed whitespace-pre-wrap break-words rounded p-4 ${maxHeightClass} overflow-auto`} style={{ background: 'var(--secondary)', color: 'var(--foreground)', border: '1px solid var(--border)' }}>
+          {content}
+        </pre>
+      )
+    }
+    return (
+      <div className="rounded p-4 text-xs leading-relaxed" style={{ background: 'var(--secondary)', color: 'var(--muted-foreground)', border: '1px solid var(--border)' }}>
+        {sub!.queueState === 'ocr'
+          ? 'The server is still reading this scan.'
+          : hasVisualFile
+            ? 'No readable text was extracted from this file.'
+            : 'No readable text was found in this file. Download the original to look at it.'}
+      </div>
+    )
+  }
+
+  function renderDocumentPane(maxHeight = 520) {
+    return (
+      <DocumentViewer
+        submissionId={sub!.id}
+        fileName={sub!.file}
+        fileKind={sub!.fileKind}
+        storedFile={sub!.storedFile}
+        queueState={sub!.queueState}
+        maxHeight={maxHeight}
+      />
+    )
+  }
+
+  const feedbackForm = (
+    <div className="flex flex-col gap-3">
+      {draft.criteria.length === 0 && <div className="text-xs" style={{ color: 'var(--muted-foreground)' }}>This file hasn't been graded yet.</div>}
+      {draft.criteria.map((c, i) => (
+        <div key={i} className="rounded p-3" style={{ background: 'var(--secondary)' }}>
+          <div className="flex items-center justify-between mb-2 gap-3">
+            <span className="text-xs" style={{ color: 'var(--foreground)' }}>
+              {c.name}{c.level ? <span className="mono text-[10px] ml-2" style={{ color: 'var(--muted-foreground)' }}>{c.level}</span> : null}
+            </span>
+            {editable ? (
+              <span className="flex items-center gap-1 mono text-xs">
+                <label className="sr-only" htmlFor={`crit-${i}`}>{c.name} points</label>
+                <input
+                  id={`crit-${i}`}
+                  type="number"
+                  min={0}
+                  max={c.max}
+                  step={0.5}
+                  value={c.earned}
+                  onChange={e => setCrit(i, { earned: Math.max(0, Math.min(c.max, Number(e.target.value))) })}
+                  className="w-14 px-2 py-1 rounded text-right outline-none"
+                  style={inputStyle}
+                />
+                <span style={{ color: 'var(--muted-foreground)' }}>/{c.max}</span>
+              </span>
+            ) : (
+              <span className="mono text-xs" style={{ color: c.earned === c.max ? '#22c55e' : 'var(--foreground)' }}>{fmtScore(c.earned)}/{c.max}</span>
+            )}
+          </div>
+          {editable ? (
+            <textarea
+              aria-label={`${c.name} feedback`}
+              value={c.note}
+              rows={2}
+              onChange={e => setCrit(i, { note: e.target.value })}
+              className="w-full text-xs leading-relaxed rounded px-2 py-1.5 outline-none resize-y"
+              style={inputStyle}
+            />
+          ) : (
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>{c.note}</p>
+          )}
+        </div>
+      ))}
+      {(draft.summary || editable) && draft.criteria.length > 0 && (
+        <div>
+          <Label className="mb-1">Overall feedback</Label>
+          {editable ? (
+            <textarea aria-label="Overall feedback" value={draft.summary} rows={3} onChange={e => setDraft({ ...draft, summary: e.target.value })} className="w-full text-xs leading-relaxed rounded px-3 py-2 outline-none resize-y" style={inputStyle} />
+          ) : (
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--foreground)' }}>{draft.summary}</p>
+          )}
+        </div>
+      )}
+      {editable && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
+          <div>
+            <label htmlFor="rv-name" className="mono text-[10px] uppercase tracking-widest block mb-1" style={{ color: 'var(--muted-foreground)' }}>Student</label>
+            <input id="rv-name" type="text" value={draft.student} onChange={e => setDraft({ ...draft, student: e.target.value })} className={input} style={inputStyle} />
+          </div>
+          <div>
+            <label htmlFor="rv-id" className="mono text-[10px] uppercase tracking-widest block mb-1" style={{ color: 'var(--muted-foreground)' }}>Student ID</label>
+            <input id="rv-id" type="text" value={draft.studentId} onChange={e => setDraft({ ...draft, studentId: e.target.value })} className={input} style={inputStyle} />
+          </div>
+          <div>
+            <label htmlFor="rv-email" className="mono text-[10px] uppercase tracking-widest block mb-1" style={{ color: 'var(--muted-foreground)' }}>Email</label>
+            <input id="rv-email" type="text" value={draft.email} onChange={e => setDraft({ ...draft, email: e.target.value })} className={input} style={inputStyle} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <>
       <Modal
         open
         onClose={onClose}
-        width={760}
+        width={modalWidth}
         title={<span className="flex items-center gap-3">{sub.student} <StatusBadge status={sub.status} /></span>}
         sub={`${sub.file} · ${sub.assignment} · ${sub.rubricName}`}
         footer={
@@ -145,103 +265,120 @@ export default function ReviewModal({ id, onClose }: { id: string | null; onClos
           </div>
         </div>
 
-        <div className="flex gap-1 mb-4 border-b" style={{ borderColor: 'var(--border)' }} role="tablist">
-          {(['feedback', 'file'] as const).map(t => (
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+          <div className="flex gap-1" role="tablist">
+            {(['feedback', 'file'] as const).map(t => (
+              <button
+                key={t}
+                type="button"
+                role="tab"
+                aria-selected={tab === t}
+                onClick={() => setTab(t)}
+                className="pb-2 px-3 text-xs"
+                style={{ color: tab === t ? 'var(--primary)' : 'var(--muted-foreground)', borderBottom: tab === t ? '2px solid var(--primary)' : '2px solid transparent', marginBottom: -1 }}
+              >
+                {t === 'feedback' ? 'Feedback' : 'Submission'}
+              </button>
+            ))}
+          </div>
+
+          {hasVisualFile && tab === 'feedback' && (
             <button
-              key={t}
               type="button"
-              role="tab"
-              aria-selected={tab === t}
-              onClick={() => setTab(t)}
-              className="pb-2 px-3 text-xs"
-              style={{ color: tab === t ? 'var(--primary)' : 'var(--muted-foreground)', borderBottom: tab === t ? '2px solid var(--primary)' : '2px solid transparent', marginBottom: -1 }}
+              aria-pressed={splitFeedback}
+              onClick={() => setSplitFeedback(s => !s)}
+              className="mb-1.5 px-2.5 py-1 text-[11px] rounded transition-opacity hover:opacity-85"
+              style={
+                splitFeedback
+                  ? { background: 'var(--primary)', color: 'var(--primary-foreground)', border: '1px solid var(--primary)' }
+                  : { background: 'var(--secondary)', color: 'var(--foreground)', border: '1px solid var(--border)' }
+              }
             >
-              {t === 'feedback' ? 'Feedback' : 'Submission'}
+              {splitFeedback ? 'Hide document' : 'Compare with document'}
             </button>
-          ))}
+          )}
+
+          {hasVisualFile && tab === 'file' && (
+            <div className="flex items-center gap-1 mb-1.5" role="group" aria-label="Submission view mode">
+              {([
+                ['split', 'Side-by-side'],
+                ['original', 'Original'],
+                ['text', 'OCR / Text'],
+              ] as const).map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={fileView === mode}
+                  onClick={() => setFileView(mode)}
+                  className="px-2.5 py-1 text-[11px] rounded transition-opacity hover:opacity-85"
+                  style={
+                    fileView === mode
+                      ? { background: 'var(--primary)', color: 'var(--primary-foreground)', border: '1px solid var(--primary)' }
+                      : { background: 'var(--secondary)', color: 'var(--muted-foreground)', border: '1px solid var(--border)' }
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {tab === 'feedback' ? (
-          <div className="flex flex-col gap-3">
-            {draft.criteria.length === 0 && <div className="text-xs" style={{ color: 'var(--muted-foreground)' }}>This file hasn't been graded yet.</div>}
-            {draft.criteria.map((c, i) => (
-              <div key={i} className="rounded p-3" style={{ background: 'var(--secondary)' }}>
-                <div className="flex items-center justify-between mb-2 gap-3">
-                  <span className="text-xs" style={{ color: 'var(--foreground)' }}>
-                    {c.name}{c.level ? <span className="mono text-[10px] ml-2" style={{ color: 'var(--muted-foreground)' }}>{c.level}</span> : null}
-                  </span>
-                  {editable ? (
-                    <span className="flex items-center gap-1 mono text-xs">
-                      <label className="sr-only" htmlFor={`crit-${i}`}>{c.name} points</label>
-                      <input
-                        id={`crit-${i}`}
-                        type="number"
-                        min={0}
-                        max={c.max}
-                        step={0.5}
-                        value={c.earned}
-                        onChange={e => setCrit(i, { earned: Math.max(0, Math.min(c.max, Number(e.target.value))) })}
-                        className="w-14 px-2 py-1 rounded text-right outline-none"
-                        style={inputStyle}
-                      />
-                      <span style={{ color: 'var(--muted-foreground)' }}>/{c.max}</span>
-                    </span>
-                  ) : (
-                    <span className="mono text-xs" style={{ color: c.earned === c.max ? '#22c55e' : 'var(--foreground)' }}>{fmtScore(c.earned)}/{c.max}</span>
-                  )}
+          splitFeedback && hasVisualFile ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+              <div className="lg:sticky lg:top-0 flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label>Source document</Label>
+                  <div className="flex items-center gap-1">
+                    {(['original', 'text'] as const).map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        aria-pressed={splitPaneTab === m}
+                        onClick={() => setSplitPaneTab(m)}
+                        className="px-2 py-0.5 text-[10px] rounded"
+                        style={
+                          splitPaneTab === m
+                            ? { background: 'var(--primary)', color: 'var(--primary-foreground)' }
+                            : { background: 'var(--secondary)', color: 'var(--muted-foreground)', border: '1px solid var(--border)' }
+                        }
+                      >
+                        {m === 'original' ? 'Original' : 'OCR text'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                {editable ? (
-                  <textarea
-                    aria-label={`${c.name} feedback`}
-                    value={c.note}
-                    rows={2}
-                    onChange={e => setCrit(i, { note: e.target.value })}
-                    className="w-full text-xs leading-relaxed rounded px-2 py-1.5 outline-none resize-y"
-                    style={inputStyle}
-                  />
-                ) : (
-                  <p className="text-xs leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>{c.note}</p>
-                )}
+                {splitPaneTab === 'original' ? renderDocumentPane(540) : renderTextPane('max-h-[540px]')}
               </div>
-            ))}
-            {(draft.summary || editable) && draft.criteria.length > 0 && (
-              <div>
-                <Label className="mb-1">Overall feedback</Label>
-                {editable ? (
-                  <textarea aria-label="Overall feedback" value={draft.summary} rows={3} onChange={e => setDraft({ ...draft, summary: e.target.value })} className="w-full text-xs leading-relaxed rounded px-3 py-2 outline-none resize-y" style={inputStyle} />
-                ) : (
-                  <p className="text-xs leading-relaxed" style={{ color: 'var(--foreground)' }}>{draft.summary}</p>
-                )}
+              <div>{feedbackForm}</div>
+            </div>
+          ) : (
+            feedbackForm
+          )
+        ) : hasVisualFile ? (
+          fileView === 'split' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+              <div className="flex flex-col gap-2 min-w-0">
+                <Label>Original document</Label>
+                {renderDocumentPane(520)}
               </div>
-            )}
-            {editable && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
-                <div>
-                  <label htmlFor="rv-name" className="mono text-[10px] uppercase tracking-widest block mb-1" style={{ color: 'var(--muted-foreground)' }}>Student</label>
-                  <input id="rv-name" type="text" value={draft.student} onChange={e => setDraft({ ...draft, student: e.target.value })} className={input} style={inputStyle} />
-                </div>
-                <div>
-                  <label htmlFor="rv-id" className="mono text-[10px] uppercase tracking-widest block mb-1" style={{ color: 'var(--muted-foreground)' }}>Student ID</label>
-                  <input id="rv-id" type="text" value={draft.studentId} onChange={e => setDraft({ ...draft, studentId: e.target.value })} className={input} style={inputStyle} />
-                </div>
-                <div>
-                  <label htmlFor="rv-email" className="mono text-[10px] uppercase tracking-widest block mb-1" style={{ color: 'var(--muted-foreground)' }}>Email</label>
-                  <input id="rv-email" type="text" value={draft.email} onChange={e => setDraft({ ...draft, email: e.target.value })} className={input} style={inputStyle} />
-                </div>
+              <div className="flex flex-col gap-2 min-w-0">
+                <Label>{sub.fileKind === 'pdf' ? 'Extracted text' : 'OCR transcription'}</Label>
+                {renderTextPane('max-h-[568px]')}
               </div>
-            )}
-          </div>
+            </div>
+          ) : fileView === 'original' ? (
+            renderDocumentPane(560)
+          ) : (
+            renderTextPane('max-h-[520px]')
+          )
         ) : (
-          <div>
-            {content === null ? (
-              <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--muted-foreground)' }}><Spinner size={12} /> Loading…</div>
-            ) : content ? (
-              <pre className="submission text-[11px] leading-relaxed whitespace-pre-wrap break-words rounded p-4 max-h-[420px] overflow-auto" style={{ background: 'var(--secondary)', color: 'var(--foreground)' }}>{content}</pre>
-            ) : (
-              <div className="text-xs leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
-                {sub.queueState === 'ocr' ? 'The server is still reading this scan.' : 'No readable text was found in this file. Download the original to look at it.'}
-              </div>
+          <div className="flex flex-col gap-3">
+            {sub.fileKind !== 'text' && !sub.storedFile && (
+              <Notice kind="info">The original {sub.fileKind} file is not stored on the server.</Notice>
             )}
+            {renderTextPane('max-h-[420px]')}
           </div>
         )}
       </Modal>

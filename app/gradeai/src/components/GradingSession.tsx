@@ -72,7 +72,7 @@ export default function GradingSession({ setActiveView }: { setActiveView: (v: V
     if (!fileList || !fileList.length) return
     setReading(true)
     try {
-      const prepared = await prepareFiles(Array.from(fileList), 0)
+      const prepared = await prepareFiles(Array.from(fileList))
       const existing = new Set(staged.map(i => i.name))
       const next: Staged[] = prepared.filter(p => !existing.has(p.name)).map(p => {
         const r = matchRoster(settings.roster, { fileName: p.name })

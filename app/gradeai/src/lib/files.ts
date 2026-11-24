@@ -109,7 +109,7 @@ async function prepareOne(name: string, size: number, buf: () => Promise<ArrayBu
   }
 }
 
-export async function prepareFiles(files: File[], maxImages: number): Promise<PreparedFile[]> {
+export async function prepareFiles(files: File[], maxImages = 0): Promise<PreparedFile[]> {
   const out: PreparedFile[] = []
   for (const f of files) out.push(...(await prepareOne(f.name, f.size, () => f.arrayBuffer(), maxImages)))
   return out
@@ -120,7 +120,7 @@ export async function readText(file: File) {
   const e = ext(file.name)
   if (e === 'pdf') {
     const { readPdf } = await import('./pdf')
-    const r = await readPdf(await file.arrayBuffer(), 0)
+    const r = await readPdf(await file.arrayBuffer())
     return r.text
   }
   if (e === 'docx') return docxToText(await file.arrayBuffer())

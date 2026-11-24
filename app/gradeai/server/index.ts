@@ -10,6 +10,7 @@ import {
 } from './auth'
 import { docDelete, docGet, docList, docPatch, docSet, docsRouter } from './docs'
 import { addClient, disconnectUser } from './events'
+import { sendStoredFile } from './file-serving'
 import { ocrFileAuto, ocrTools, ocrBackend } from './ocr'
 import {
   cancelBatch, checkBatch, claim, complete, release, dropTasksFor, enqueueGrade, heartbeat, importRubric, logActivity, modelStatus, settings, startMaintenance,
@@ -268,10 +269,8 @@ api.post('/uploads', upload.any(), async (req, res) => {
 
 api.get('/files/:id', (req, res) => {
   const sub = docGet(`submissions/${req.params.id}`) as Submission | null
-  if (!sub?.storedFile) { res.status(404).json({ error: 'not_found', message: 'The original file is not stored.' }); return }
-  const abs = path.resolve(config.dataDir, sub.storedFile)
-  if (!abs.startsWith(path.join(config.dataDir, 'files') + path.sep) || !fs.existsSync(abs)) { res.status(404).json({ error: 'not_found' }); return }
-  res.download(abs, sub.file)
+  const inline = req.query.inline === '1' || req.query.inline === 'true'
+  sendStoredFile(res, config.dataDir, sub, inline)
 })
 
 api.post('/submissions/:id/regrade', (req, res) => {
