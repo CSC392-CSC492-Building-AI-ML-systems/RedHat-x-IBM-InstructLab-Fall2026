@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react'
 import { personName, useApp, usePeople, usePerms } from '../context'
 import type { CriterionResult, Submission } from '../lib/types'
 import { confColor, fmtScore, longDate, relTime, scoreColor } from '../lib/format'
+import { hasLatexMath } from '../lib/latex'
 import { Bar, Button, Confirm, Label, Modal, Notice, Spinner, StatusBadge } from './ui'
 import DocumentViewer from './DocumentViewer'
+import LatexExtract from './LatexExtract'
 
 type FileViewMode = 'split' | 'original' | 'text'
+type ExtractFormat = 'latex' | 'raw'
 
 export default function ReviewModal({ id, onClose }: { id: string | null; onClose: () => void }) {
   const app = useApp()
@@ -14,6 +17,7 @@ export default function ReviewModal({ id, onClose }: { id: string | null; onClos
   const sub = submissions.find(s => s.id === id) ?? null
   const [tab, setTab] = useState<'feedback' | 'file'>('feedback')
   const [fileView, setFileView] = useState<FileViewMode>('split')
+  const [extractFormat, setExtractFormat] = useState<ExtractFormat>('latex')
   const [splitFeedback, setSplitFeedback] = useState(false)
   const [splitPaneTab, setSplitPaneTab] = useState<'original' | 'text'>('original')
   const [draft, setDraft] = useState<Submission | null>(null)
@@ -26,6 +30,11 @@ export default function ReviewModal({ id, onClose }: { id: string | null; onClos
     setDraft(sub ? structuredClone(sub) : null)
     setTab('feedback')
     setFileView('split')
+    setExtractFormat(
+      sub && (sub.fileKind === 'scan' || sub.fileKind === 'image' || /\.(tex|md)$/i.test(sub.file))
+        ? 'latex'
+        : 'raw',
+    )
     setSplitFeedback(false)
     setSplitPaneTab('original')
     setContent(null)
@@ -40,7 +49,14 @@ export default function ReviewModal({ id, onClose }: { id: string | null; onClos
 
   useEffect(() => {
     const needsText = tab === 'file' || (tab === 'feedback' && splitFeedback && splitPaneTab === 'text')
-    if (needsText && content === null && id) getContent(id).then(setContent).catch(() => setContent(''))
+    if (needsText && content === null && id) {
+      getContent(id)
+        .then(txt => {
+          setContent(txt)
+          if (txt && hasLatexMath(txt)) setExtractFormat('latex')
+        })
+        .catch(() => setContent(''))
+    }
   }, [tab, splitFeedback, splitPaneTab, content, id, getContent])
 
   if (!id || !sub || !draft) return null
@@ -99,15 +115,54 @@ export default function ReviewModal({ id, onClose }: { id: string | null; onClos
   const input = 'w-full px-3 py-2 text-sm rounded outline-none'
   const inputStyle = { background: 'var(--muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }
 
-  function renderTextPane(maxHeightClass = 'max-h-[520px]') {
+  function renderFormatToggle() {
+    if (!content) return null
+    return (
+      <div className="flex items-center gap-1" role="group" aria-label="Extract display format">
+        {([
+          ['latex', 'LaTeX'],
+          ['raw', 'Raw'],
+        ] as const).map(([fmt, label]) => (
+          <button
+            key={fmt}
+            type="button"
+            aria-pressed={extractFormat === fmt}
+            onClick={() => setExtractFormat(fmt)}
+            className="px-2 py-0.5 text-[10px] rounded transition-opacity hover:opacity-85"
+            style={
+              extractFormat === fmt
+                ? { background: 'var(--primary)', color: 'var(--primary-foreground)' }
+                : { background: 'var(--secondary)', color: 'var(--muted-foreground)', border: '1px solid var(--border)' }
+            }
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    )
+  }
+
+  function renderTextPane(maxHeightClass = 'max-h-[520px]', showHeader = true) {
     if (content === null) {
       return <div className="flex items-center gap-2 text-xs py-6" style={{ color: 'var(--muted-foreground)' }}><Spinner size={12} /> Loading…</div>
     }
     if (content) {
       return (
-        <pre className={`submission text-[11px] leading-relaxed whitespace-pre-wrap break-words rounded p-4 ${maxHeightClass} overflow-auto`} style={{ background: 'var(--secondary)', color: 'var(--foreground)', border: '1px solid var(--border)' }}>
-          {content}
-        </pre>
+        <div className="flex flex-col gap-2 min-w-0">
+          {showHeader && (
+            <div className="flex items-center justify-between gap-2">
+              <Label>{sub!.fileKind === 'pdf' ? 'Extracted text' : sub!.fileKind === 'text' ? 'Submission text' : 'OCR transcription'}</Label>
+              {renderFormatToggle()}
+            </div>
+          )}
+          {extractFormat === 'latex' ? (
+            <LatexExtract content={content} className={maxHeightClass} />
+          ) : (
+            <pre className={`submission text-[11px] leading-relaxed whitespace-pre-wrap break-words rounded p-4 ${maxHeightClass} overflow-auto`} style={{ background: 'var(--secondary)', color: 'var(--foreground)', border: '1px solid var(--border)' }}>
+              {content}
+            </pre>
+          )}
+        </div>
       )
     }
     return (
@@ -331,6 +386,7 @@ export default function ReviewModal({ id, onClose }: { id: string | null; onClos
                 <div className="flex items-center justify-between gap-2">
                   <Label>Source document</Label>
                   <div className="flex items-center gap-1">
+                    {splitPaneTab === 'text' && renderFormatToggle()}
                     {(['original', 'text'] as const).map(m => (
                       <button
                         key={m}
@@ -349,7 +405,7 @@ export default function ReviewModal({ id, onClose }: { id: string | null; onClos
                     ))}
                   </div>
                 </div>
-                {splitPaneTab === 'original' ? renderDocumentPane(540) : renderTextPane('max-h-[540px]')}
+                {splitPaneTab === 'original' ? renderDocumentPane(540) : renderTextPane('max-h-[540px]', false)}
               </div>
               <div>{feedbackForm}</div>
             </div>
@@ -364,8 +420,11 @@ export default function ReviewModal({ id, onClose }: { id: string | null; onClos
                 {renderDocumentPane(520)}
               </div>
               <div className="flex flex-col gap-2 min-w-0">
-                <Label>{sub.fileKind === 'pdf' ? 'Extracted text' : 'OCR transcription'}</Label>
-                {renderTextPane('max-h-[568px]')}
+                <div className="flex items-center justify-between gap-2">
+                  <Label>{sub.fileKind === 'pdf' ? 'Extracted text' : 'OCR transcription'}</Label>
+                  {renderFormatToggle()}
+                </div>
+                {renderTextPane('max-h-[568px]', false)}
               </div>
             </div>
           ) : fileView === 'original' ? (

@@ -25,6 +25,9 @@ html, body, #root { height: 100%; }
 
 * {
   box-sizing: border-box;
+}
+
+*:not(.katex, .katex *) {
   font-family: Lexend, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
