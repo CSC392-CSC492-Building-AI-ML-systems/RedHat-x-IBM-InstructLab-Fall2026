@@ -54,21 +54,38 @@ async function callGemini(mimeType: string, base64Data: string): Promise<string>
     },
   }
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
+  const started = Date.now()
+  let res: Response
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error(`[OCR] Gemini API request failed (${config.geminiOcrModel}) after ${Date.now() - started}ms: ${msg}`)
+    throw err
+  }
 
+  const elapsed = Date.now() - started
   if (!res.ok) {
     const err = await res.text()
+    console.error(`[OCR] Gemini API error (${config.geminiOcrModel}) HTTP ${res.status} in ${elapsed}ms: ${err.slice(0, 200)}`)
     throw new Error(`Gemini OCR API error ${res.status}: ${err.slice(0, 300)}`)
   }
 
   const data = (await res.json()) as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[]
+    candidates?: { finishReason?: string; content?: { parts?: { text?: string }[] } }[]
+    promptFeedback?: { blockReason?: string }
   }
-  return data.candidates?.[0]?.content?.parts?.map(p => p.text ?? '').join('') ?? ''
+  const candidate = data.candidates?.[0]
+  const text = candidate?.content?.parts?.map(p => p.text ?? '').join('') ?? ''
+  const reason = candidate?.finishReason ?? data.promptFeedback?.blockReason
+  console.log(
+    `[OCR] Gemini API ok (${config.geminiOcrModel}) HTTP ${res.status} in ${elapsed}ms (${text.length} chars${reason ? `, finish=${reason}` : ''})`,
+  )
+  return text
 }
 
 /** MIME type lookup for common image extensions. */

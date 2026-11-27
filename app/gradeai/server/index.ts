@@ -259,10 +259,13 @@ api.post('/uploads', upload.any(), async (req, res) => {
     try {
       const text = await ocrFileAuto(o.file, o.kind)
       if (!text.replace(/--- Page \d+ ---/g, '').trim()) throw new Error('No readable text was found on the scanned pages.')
+      console.log(`[OCR] Done ${o.id} (${path.basename(o.file)}): ${text.length} chars`)
       docSet(`submissionContent/${o.id}`, { text })
       enqueueGrade(o.id)
     } catch (e) {
-      docPatch(`submissions/${o.id}`, { status: 'error', queueState: null, error: e instanceof Error ? e.message : 'OCR failed.', updatedAt: Date.now() })
+      const msg = e instanceof Error ? e.message : 'OCR failed.'
+      console.error(`[OCR] Failed ${o.id} (${path.basename(o.file)}): ${msg}`)
+      docPatch(`submissions/${o.id}`, { status: 'error', queueState: null, error: msg, updatedAt: Date.now() })
     }
   }
 })
