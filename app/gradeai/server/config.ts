@@ -5,6 +5,11 @@ function num(v: string | undefined, d: number) {
   return Number.isFinite(n) && n > 0 ? n : d
 }
 
+function nonNegInt(v: string | undefined, d: number) {
+  const n = Number(v)
+  return Number.isInteger(n) && n >= 0 ? n : d
+}
+
 const publicUrl = (process.env.PUBLIC_URL || 'http://localhost:8080').replace(/\/$/, '')
 
 export const config = {
@@ -26,8 +31,12 @@ export const config = {
   staticDir: path.resolve(process.env.STATIC_DIR || './dist'),
   /** Gemini API key for VLM-based OCR. When set, Gemini is used instead of Tesseract. */
   geminiApiKey: process.env.GEMINI_API_KEY || '',
-  /** Gemini model to use for OCR. Defaults to gemini-2.0-flash. */
-  geminiOcrModel: process.env.GEMINI_OCR_MODEL || 'gemini-2.0-flash',
+  /** Gemini model to use for OCR. */
+  geminiOcrModel: process.env.GEMINI_OCR_MODEL || 'gemini-flash-latest',
+  /** Per-request timeout for Gemini OCR API calls in milliseconds. */
+  geminiOcrTimeoutMs: num(process.env.GEMINI_OCR_TIMEOUT_MS, 60_000),
+  /** Max retries for transient Gemini OCR failures (429, 5xx, timeout, network). */
+  geminiOcrMaxRetries: nonNegInt(process.env.GEMINI_OCR_MAX_RETRIES, 3),
 }
 
 export const STAFF = new Set(['professor', 'admin'])

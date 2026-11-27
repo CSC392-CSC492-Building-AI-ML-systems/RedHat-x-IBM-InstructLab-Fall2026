@@ -36,18 +36,24 @@ export async function ocrFile(file: string, kind: 'scan' | 'image', maxPages = 1
   }
 }
 
-import { geminiOcrFile } from './gemini-ocr'
+import { geminiOcrFile, type GeminiCallOptions } from './gemini-ocr'
 import { config } from './config'
 
 /**
  * Primary OCR entry point.
- * Delegates to Gemini when GEMINI_API_KEY is set; falls back to Tesseract otherwise.
- * The original ocrFile() and ocrTools remain exported and unchanged.
+ * Uses Gemini when GEMINI_API_KEY is set, otherwise Tesseract. There is deliberately no
+ * Gemini -> Tesseract fallback: Tesseract garbles handwriting, and a failed OCR with a clear
+ * error is better than silently grading unreadable text.
  */
-export async function ocrFileAuto(file: string, kind: 'scan' | 'image', maxPages = 12): Promise<string> {
+export async function ocrFileAuto(
+  file: string,
+  kind: 'scan' | 'image',
+  maxPages = 12,
+  opts: GeminiCallOptions = {},
+): Promise<string> {
   if (config.geminiApiKey) {
     console.log(`[OCR] Using Gemini (${config.geminiOcrModel}) for ${path.basename(file)}`)
-    return geminiOcrFile(file, kind, maxPages)
+    return geminiOcrFile(file, kind, maxPages, opts)
   }
   console.log(`[OCR] Using Tesseract for ${path.basename(file)}`)
   return ocrFile(file, kind, maxPages)

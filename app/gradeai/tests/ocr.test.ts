@@ -4,8 +4,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import { config } from '../server/config'
-import { ocrTools, ocrBackend, ocrFileAuto } from '../server/ocr'
-import { geminiOcrFile } from '../server/gemini-ocr'
+import { ocrTools, ocrFileAuto } from '../server/ocr'
+import { GeminiOcrError, geminiOcrFile } from '../server/gemini-ocr'
 import { guessStudentFromFilename, formatBytes } from '../src/lib/files'
 
 describe('GradeAI OCR & Transcription Pipeline', () => {
@@ -51,17 +51,19 @@ describe('GradeAI OCR & Transcription Pipeline', () => {
   describe('2. Gemini VLM OCR (Image transcription)', () => {
     it('transcribes an image by sending base64 and transcription prompt', async () => {
       config.geminiApiKey = 'fake-api-key'
-      config.geminiOcrModel = 'gemini-2.0-flash'
+      config.geminiOcrModel = 'gemini-flash-latest'
 
       // Create a dummy image file
       const imgPath = path.join(tmpDir, 'student_work.png')
       fs.writeFileSync(imgPath, Buffer.from('fake-png-data'))
 
       let capturedUrl = ''
+      let capturedHeaders: Record<string, string> = {}
       let capturedBody: any = null
 
       globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
         capturedUrl = String(input)
+        capturedHeaders = (init?.headers ?? {}) as Record<string, string>
         capturedBody = JSON.parse(String(init?.body))
         return new Response(
           JSON.stringify({
@@ -84,8 +86,9 @@ describe('GradeAI OCR & Transcription Pipeline', () => {
       const text = await geminiOcrFile(imgPath, 'image')
 
       // Assertions
-      assert.ok(capturedUrl.includes('models/gemini-2.0-flash:generateContent'))
-      assert.ok(capturedUrl.includes('key=fake-api-key'))
+      assert.ok(capturedUrl.includes('models/gemini-flash-latest:generateContent'))
+      assert.ok(!capturedUrl.includes('fake-api-key'), 'API key should not appear in the URL')
+      assert.strictEqual(capturedHeaders['x-goog-api-key'], 'fake-api-key')
       assert.strictEqual(capturedBody.contents[0].parts[1].inlineData.mimeType, 'image/png')
       assert.strictEqual(
         capturedBody.contents[0].parts[1].inlineData.data,
@@ -123,20 +126,141 @@ describe('GradeAI OCR & Transcription Pipeline', () => {
       }
     })
 
-    it('throws a descriptive error when Gemini API returns non-200', async () => {
-      config.geminiApiKey = 'bad-key'
+    it('throws a descriptive error when Gemini API returns non-200 without retrying permanent 4xx', async () => {
+      config.geminiApiKey = 'fake-api-key'
       const imgPath = path.join(tmpDir, 'error_test.png')
       fs.writeFileSync(imgPath, Buffer.from('data'))
 
+      let calls = 0
       globalThis.fetch = async () => {
-        return new Response('API_KEY_INVALID: API key not valid.', { status: 400 })
+        calls++
+        return new Response(JSON.stringify({ error: { status: 'INVALID_ARGUMENT', message: 'Invalid image payload.' } }), { status: 400 })
       }
 
       await assert.rejects(
         async () => {
-          await geminiOcrFile(imgPath, 'image')
+          await geminiOcrFile(imgPath, 'image', 12, { maxRetries: 3, baseBackoffMs: 1 })
         },
-        /Gemini OCR API error 400: API_KEY_INVALID/
+        (err: unknown) =>
+          err instanceof GeminiOcrError &&
+          err.code === 'bad_request' &&
+          !err.retryable &&
+          /Gemini OCR API error 400: INVALID_ARGUMENT: Invalid image payload/.test(err.message),
+      )
+      assert.strictEqual(calls, 1)
+    })
+
+    it('classifies Gemini\'s HTTP 400 API_KEY_INVALID as an auth error', async () => {
+      config.geminiApiKey = 'bad-key'
+      const imgPath = path.join(tmpDir, 'auth_test.png')
+      fs.writeFileSync(imgPath, Buffer.from('data'))
+
+      let calls = 0
+      globalThis.fetch = async () => {
+        calls++
+        return new Response(
+          JSON.stringify({ error: { status: 'INVALID_ARGUMENT', message: 'API key not valid. Please pass a valid API key.', details: [{ reason: 'API_KEY_INVALID' }] } }),
+          { status: 400 },
+        )
+      }
+
+      await assert.rejects(
+        () => geminiOcrFile(imgPath, 'image', 12, { maxRetries: 3, baseBackoffMs: 1 }),
+        (err: unknown) => err instanceof GeminiOcrError && err.code === 'auth' && !err.retryable,
+      )
+      assert.strictEqual(calls, 1)
+    })
+
+    it('exposes Retry-After on the error when retries are exhausted', async () => {
+      config.geminiApiKey = 'fake-api-key'
+      const imgPath = path.join(tmpDir, 'retry_after.png')
+      fs.writeFileSync(imgPath, Buffer.from('data'))
+
+      globalThis.fetch = async () => new Response('busy', { status: 429, headers: { 'retry-after': '2' } })
+
+      await assert.rejects(
+        () => geminiOcrFile(imgPath, 'image', 12, { maxRetries: 0 }),
+        (err: unknown) => err instanceof GeminiOcrError && err.code === 'rate_limit' && err.retryAfterMs === 2000,
+      )
+    })
+
+    it('retries transient 429 and 503 responses and succeeds on recovery', async () => {
+      config.geminiApiKey = 'fake-api-key'
+      const imgPath = path.join(tmpDir, 'retry_test.png')
+      fs.writeFileSync(imgPath, Buffer.from('data'))
+
+      let calls = 0
+      globalThis.fetch = async () => {
+        calls++
+        if (calls === 1) {
+          return new Response(JSON.stringify({ error: { status: 'RESOURCE_EXHAUSTED', message: 'Rate limited' } }), {
+            status: 429,
+            headers: { 'retry-after': '0' },
+          })
+        }
+        if (calls === 2) {
+          return new Response('Service Unavailable', { status: 503 })
+        }
+        return new Response(
+          JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: 'Recovered OCR' }] } }] }),
+          { status: 200 },
+        )
+      }
+
+      const text = await geminiOcrFile(imgPath, 'image', 12, { maxRetries: 3, baseBackoffMs: 1 })
+      assert.strictEqual(text, 'Recovered OCR')
+      assert.strictEqual(calls, 3)
+    })
+
+    it('aborts and retries on request timeout, throwing GeminiOcrError(timeout) when exhausted', async () => {
+      config.geminiApiKey = 'fake-api-key'
+      const imgPath = path.join(tmpDir, 'timeout_test.png')
+      fs.writeFileSync(imgPath, Buffer.from('data'))
+
+      let calls = 0
+      globalThis.fetch = async (_url: RequestInfo | URL, init?: RequestInit) => {
+        calls++
+        return new Promise<Response>((_resolve, reject) => {
+          const sig = init?.signal
+          if (sig?.aborted) {
+            reject(sig.reason ?? new DOMException('Timed out', 'TimeoutError'))
+            return
+          }
+          sig?.addEventListener('abort', () => reject(sig.reason ?? new DOMException('Timed out', 'TimeoutError')), { once: true })
+        })
+      }
+
+      await assert.rejects(
+        async () => {
+          await geminiOcrFile(imgPath, 'image', 12, { timeoutMs: 25, maxRetries: 1, baseBackoffMs: 1 })
+        },
+        (err: unknown) => err instanceof GeminiOcrError && err.code === 'timeout' && err.retryable,
+      )
+      assert.strictEqual(calls, 2)
+    })
+
+    it('fails cleanly on safety blocks and MAX_TOKENS truncation', async () => {
+      config.geminiApiKey = 'fake-api-key'
+      const imgPath = path.join(tmpDir, 'blocked_test.png')
+      fs.writeFileSync(imgPath, Buffer.from('data'))
+
+      globalThis.fetch = async () =>
+        new Response(JSON.stringify({ promptFeedback: { blockReason: 'SAFETY' } }), { status: 200 })
+
+      await assert.rejects(
+        () => geminiOcrFile(imgPath, 'image', 12, { maxRetries: 2, baseBackoffMs: 1 }),
+        (err: unknown) => err instanceof GeminiOcrError && err.code === 'blocked' && !err.retryable,
+      )
+
+      globalThis.fetch = async () =>
+        new Response(
+          JSON.stringify({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: 'partial' }] } }] }),
+          { status: 200 },
+        )
+
+      await assert.rejects(
+        () => geminiOcrFile(imgPath, 'image', 12, { maxRetries: 2, baseBackoffMs: 1 }),
+        (err: unknown) => err instanceof GeminiOcrError && err.code === 'truncated' && !err.retryable,
       )
     })
   })
@@ -169,6 +293,43 @@ describe('GradeAI OCR & Transcription Pipeline', () => {
       assert.strictEqual(capturedMime, 'application/pdf')
       assert.ok(text.includes('--- Page 1 ---'))
       assert.ok(text.includes('Assume $P(k)$ is true.'))
+    })
+
+    it('does not rasterize pages after transient failures exhaust their retries', async () => {
+      config.geminiApiKey = 'fake-api-key'
+      const pdfPath = path.join(tmpDir, 'transient.pdf')
+      fs.writeFileSync(pdfPath, Buffer.from('%PDF-1.4 dummy content'))
+
+      const mimes: string[] = []
+      globalThis.fetch = async (_url: RequestInfo | URL, init?: RequestInit) => {
+        mimes.push(JSON.parse(String(init?.body)).contents[0].parts[1].inlineData.mimeType)
+        return new Response('Service Unavailable', { status: 503 })
+      }
+
+      await assert.rejects(
+        () => geminiOcrFile(pdfPath, 'scan', 12, { maxRetries: 2, baseBackoffMs: 1 }),
+        (err: unknown) => err instanceof GeminiOcrError && err.code === 'server' && err.retryable,
+      )
+      // 1 attempt + 2 retries, all for the whole PDF; no per-page image/png calls.
+      assert.deepStrictEqual(mimes, ['application/pdf', 'application/pdf', 'application/pdf'])
+    })
+
+    it('fails fast on auth errors for PDFs without rasterizing', async () => {
+      config.geminiApiKey = 'bad-key'
+      const pdfPath = path.join(tmpDir, 'auth.pdf')
+      fs.writeFileSync(pdfPath, Buffer.from('%PDF-1.4 dummy content'))
+
+      let calls = 0
+      globalThis.fetch = async () => {
+        calls++
+        return new Response('API_KEY_INVALID: API key not valid.', { status: 400 })
+      }
+
+      await assert.rejects(
+        () => geminiOcrFile(pdfPath, 'scan', 12, { maxRetries: 3, baseBackoffMs: 1 }),
+        (err: unknown) => err instanceof GeminiOcrError && err.code === 'auth',
+      )
+      assert.strictEqual(calls, 1)
     })
   })
 

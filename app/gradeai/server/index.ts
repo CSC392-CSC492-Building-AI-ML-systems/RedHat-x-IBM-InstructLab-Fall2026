@@ -10,7 +10,7 @@ import {
 } from './auth'
 import { docDelete, docGet, docList, docPatch, docSet, docsRouter } from './docs'
 import { addClient, disconnectUser } from './events'
-import { sendStoredFile } from './file-serving'
+import { resolveStoredFile, sendStoredFile } from './file-serving'
 import { ocrFileAuto, ocrTools, ocrBackend } from './ocr'
 import {
   cancelBatch, checkBatch, claim, complete, release, dropTasksFor, enqueueGrade, heartbeat, importRubric, logActivity, modelStatus, settings, startMaintenance,
@@ -212,6 +212,89 @@ function safeName(n: string) {
   return (n.replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^\.+/, '') || 'file').slice(0, 120)
 }
 
+/** Max OCR jobs running at once across the whole server (uploads, regrades and recovery share it). */
+const OCR_CONCURRENCY = 2
+
+interface OcrJob {
+  id: string
+  file: string
+  kind: 'scan' | 'image'
+}
+
+const ocrQueue: OcrJob[] = []
+/** Submission ids that are queued for OCR or currently being read. */
+const ocrJobs = new Set<string>()
+let ocrRunning = 0
+
+/** True while the submission still wants its OCR result (not deleted, cancelled or failed meanwhile). */
+function awaitingOcr(id: string) {
+  const sub = docGet(`submissions/${id}`) as Submission | null
+  return !!sub && sub.status === 'pending' && sub.queueState === 'ocr'
+}
+
+function enqueueOcr(job: OcrJob) {
+  if (ocrJobs.has(job.id)) return
+  ocrJobs.add(job.id)
+  ocrQueue.push(job)
+  pumpOcr()
+}
+
+function pumpOcr() {
+  while (ocrRunning < OCR_CONCURRENCY && ocrQueue.length) {
+    const job = ocrQueue.shift()!
+    ocrRunning++
+    void runOcrJob(job).finally(() => {
+      ocrRunning--
+      ocrJobs.delete(job.id)
+      pumpOcr()
+    })
+  }
+}
+
+async function runOcrJob(o: OcrJob) {
+  if (!awaitingOcr(o.id)) return
+  try {
+    const text = await ocrFileAuto(o.file, o.kind)
+    if (!text.replace(/--- Page \d+ ---/g, '').trim()) throw new Error('No readable text was found on the scanned pages.')
+    if (!docGet(`submissions/${o.id}`)) return
+    console.log(`[OCR] Done ${o.id} (${path.basename(o.file)}): ${text.length} chars`)
+    // Keep the text even if the batch was cancelled meanwhile, so a later Regrade needn't re-read it.
+    docSet(`submissionContent/${o.id}`, { text })
+    if (awaitingOcr(o.id)) enqueueGrade(o.id)
+  } catch (e) {
+    if (!awaitingOcr(o.id)) return
+    const msg = e instanceof Error ? e.message : 'OCR failed.'
+    console.error(`[OCR] Failed ${o.id} (${path.basename(o.file)}): ${msg}`)
+    docPatch(`submissions/${o.id}`, { status: 'error', queueState: null, error: msg, updatedAt: Date.now() })
+  }
+}
+
+function recoverStuckOcr() {
+  const stuck = docList('submissions').filter(d => d.data.status === 'pending' && d.data.queueState === 'ocr')
+  if (!stuck.length) return
+  let recovered = 0
+  for (const d of stuck) {
+    const sub = d.data as unknown as Submission
+    if (docGet(`submissionContent/${d.id}`)) {
+      enqueueGrade(d.id)
+      continue
+    }
+    const abs = sub.storedFile ? resolveStoredFile(config.dataDir, sub.storedFile) : null
+    if (abs && (sub.fileKind === 'scan' || sub.fileKind === 'image')) {
+      enqueueOcr({ id: d.id, file: abs, kind: sub.fileKind })
+      recovered++
+    } else {
+      docPatch(`submissions/${d.id}`, {
+        status: 'error',
+        queueState: null,
+        error: 'OCR was interrupted and the original file is missing.',
+        updatedAt: Date.now(),
+      })
+    }
+  }
+  if (recovered) console.log(`[OCR] Recovering ${recovered} interrupted OCR submission(s)`)
+}
+
 api.post('/uploads', upload.any(), async (req, res) => {
   let meta: UploadMeta
   try { meta = JSON.parse(String(req.body?.meta ?? '')) } catch { res.status(400).json({ error: 'bad_request' }); return }
@@ -255,19 +338,7 @@ api.post('/uploads', upload.any(), async (req, res) => {
   res.json({ batchId, ids })
   if (meta.final !== false) checkBatch(batchId)
 
-  for (const o of toOcr) {
-    try {
-      const text = await ocrFileAuto(o.file, o.kind)
-      if (!text.replace(/--- Page \d+ ---/g, '').trim()) throw new Error('No readable text was found on the scanned pages.')
-      console.log(`[OCR] Done ${o.id} (${path.basename(o.file)}): ${text.length} chars`)
-      docSet(`submissionContent/${o.id}`, { text })
-      enqueueGrade(o.id)
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'OCR failed.'
-      console.error(`[OCR] Failed ${o.id} (${path.basename(o.file)}): ${msg}`)
-      docPatch(`submissions/${o.id}`, { status: 'error', queueState: null, error: msg, updatedAt: Date.now() })
-    }
-  }
+  for (const job of toOcr) enqueueOcr(job)
 })
 
 api.get('/files/:id', (req, res) => {
@@ -279,13 +350,30 @@ api.get('/files/:id', (req, res) => {
 api.post('/submissions/:id/regrade', (req, res) => {
   const sub = docGet(`submissions/${req.params.id}`) as Submission | null
   if (!sub) { res.status(404).json({ error: 'not_found' }); return }
-  if (sub.status === 'pending' && sub.queueState === 'grading') { res.status(409).json({ error: 'busy', message: 'This file is already being graded.' }); return }
-  if (!docGet(`submissionContent/${req.params.id}`)) { res.status(400).json({ error: 'no_text', message: 'There is no readable text for this file. Upload it again.' }); return }
+  const busy = ocrJobs.has(req.params.id) || (sub.status === 'pending' && (sub.queueState === 'ocr' || sub.queueState === 'grading'))
+  if (busy) {
+    res.status(409).json({ error: 'busy', message: 'This file is already being processed.' })
+    return
+  }
+  const hasContent = !!docGet(`submissionContent/${req.params.id}`)
+  const ocrKind = sub.fileKind === 'scan' || sub.fileKind === 'image' ? sub.fileKind : null
+  const abs = !hasContent && ocrKind && sub.storedFile ? resolveStoredFile(config.dataDir, sub.storedFile) : null
+  const ocrJob: OcrJob | null = abs && ocrKind ? { id: req.params.id, file: abs, kind: ocrKind } : null
+  if (!hasContent && !ocrJob) {
+    res.status(400).json({ error: 'no_text', message: 'There is no readable text for this file. Upload it again.' })
+    return
+  }
   const rubricId = req.body?.rubricId ? String(req.body.rubricId) : sub.rubricId
   if (rubricId !== sub.rubricId) {
     const r = docGet(`rubrics/${rubricId}`) as { name: string; totalPoints: number } | null
     if (!r) { res.status(400).json({ error: 'no_rubric' }); return }
     docPatch(`submissions/${req.params.id}`, { rubricId, rubricName: r.name, total: r.totalPoints })
+  }
+  if (ocrJob) {
+    docPatch(`submissions/${req.params.id}`, { status: 'pending', queueState: 'ocr', error: '', updatedAt: Date.now() })
+    enqueueOcr(ocrJob)
+    res.json({ ok: true, ocr: true, model: modelStatus() })
+    return
   }
   enqueueGrade(req.params.id)
   res.json({ ok: true, model: modelStatus() })
@@ -350,10 +438,11 @@ if (fs.existsSync(config.staticDir)) {
 }
 
 startMaintenance()
+recoverStuckOcr()
 app.listen(config.port, config.host, () => {
   console.log(`GradeAI listening on ${config.host}:${config.port} (public URL ${config.publicUrl})`)
   if (!config.workerToken) console.warn('WORKER_TOKEN is not set: the Fir worker cannot connect until you set it.')
-  if (!ocrTools.tesseract) console.warn('tesseract not found: scanned submissions cannot be read.')
+  if (ocrBackend === 'none') console.warn('Neither GEMINI_API_KEY nor tesseract is configured: scanned submissions cannot be read.')
   if (userCount() === 0) console.log(`No accounts yet. Open ${config.publicUrl} to create the first administrator.`)
 })
 
