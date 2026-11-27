@@ -1,21 +1,25 @@
 %==============================================================================
-% GradeAI -- first_draft.tex  (SKELETON)
+% GradeAI -- final_paper_draft.tex
 % CSC398H5 F (Fall 2026) -- Red Hat x IBM InstructLab
 % Final paper due: December 7, 2026
 %
 % HOW TO USE THIS FILE
 %   * \todo{Owner}{what to do}   -> red inline note. Search for "\todo" to find work.
-%   * \ph{...}                   -> BLUE text = placeholder/target number that is
-%                                   NOT a real result yet. Replace with cluster output
-%                                   and remove the \ph{} wrapper.
+%   * \ph{...}                   -> BLUE text = placeholder for a number that is NOT a
+%                                   measured result yet. Replace it with cluster output and
+%                                   remove the \ph{} wrapper.
 %   * % TODO [Owner]: ...        -> source-code comment pointing at the log/file to use.
+%   * Every number NOT wrapped in \ph{} comes from a file in the repository (the file is named
+%     in a comment next to it). Keep it that way.
 %   * Before submission: set \draftfalse below to hide all todos and colouring.
+%   * Compile from this folder (the appendix reads ../jobs/*.sh):  latexmk -pdf final_paper_draft.tex
 %==============================================================================
 \documentclass[11pt,a4paper]{article}
 
 %---------------------------- Packages ----------------------------------------
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{lmodern}
 \usepackage[margin=1in]{geometry}
 \usepackage{microtype}
 \usepackage{amsmath,amssymb,amsfonts,amsthm}
@@ -23,11 +27,13 @@
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc,backgrounds}
 \usepackage{listings}
 \usepackage{enumitem}
 \usepackage{tabularx}
+\usepackage{array}
 \usepackage{caption}
+\usepackage[numbers,sort&compress]{natbib}
 \usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
 \usepackage[capitalise,noabbrev]{cleveref}
 
@@ -41,17 +47,23 @@
 
 %---------------------------- Listings style ----------------------------------
 \lstdefinestyle{prompt}{
-  basicstyle=\ttfamily\footnotesize,
-  breaklines=true, breakatwhitespace=true,
+  basicstyle=\ttfamily\scriptsize,
+  breaklines=true, breakatwhitespace=true, showstringspaces=false,
   frame=single, rulecolor=\color{black!30},
   backgroundcolor=\color{black!3},
   columns=fullflexible, keepspaces=true,
-  xleftmargin=0.5em, xrightmargin=0.5em, aboveskip=1em, belowskip=1em
+  xleftmargin=0.5em, xrightmargin=0.5em, aboveskip=1em, belowskip=1em,
+  literate={≤}{{$\le$}}1 {≥}{{$\ge$}}1 {→}{{$\to$}}1 {—}{{---}}1 {–}{{--}}1
 }
 \lstset{style=prompt}
 
 %---------------------------- Macros ------------------------------------------
 \newcommand{\gradeai}{\textsc{GradeAI}}
+\newcommand{\ilab}{\texttt{ilab}}
+\newcommand{\file}[1]{\nolinkurl{#1}}
+\urlstyle{tt}
+\makeatletter\g@addto@macro{\UrlBreaks}{\do\_\do\-}\makeatother
+\newcommand{\lvl}[1]{\textsf{#1}}
 \newcommand{\indic}{\mathbb{I}}
 \newcommand{\levels}{\mathcal{L}}
 \DeclareMathOperator*{\argmax}{arg\,max}
@@ -59,13 +71,13 @@
 \newtheorem{definition}{Definition}
 
 %---------------------------- Title -------------------------------------------
-\title{\textbf{\gradeai: InstructLab and Open-Weights LLMs for Privacy-Preserving Automated Student Proof Grading (blah) }\\[0.6em]
+\title{\textbf{Grade First, Then Write: Rubric-Controlled Synthetic Data Generation with InstructLab for Privacy-Preserving Proof Grading}\\[0.6em]
 \large CSC398H5: Topics in Computer Science --- Building Ethical Software Solutions with Industry Collaboration \\
 (Red Hat $\times$ IBM InstructLab, Fall 2026)}
 
-
 \author{%
-  Name 1 \hspace{0.5em} Name 2 \hspace{0.5em} Name 3 \hspace{0.5em} Name 4 \hspace{0.5em} Name 5\\[0.5em]
+  Sungmin Cho \hspace{1em} Gerardus Raynard Effrien \hspace{1em} Daniel Halpern\\
+Nikita Nathania Rudy \hspace{1em} Josh Villas\\[0.5em]
   University of Toronto Mississauga\\
   Department of Mathematical and Computational Sciences
 }
@@ -73,391 +85,828 @@
 
 \begin{document}
 \maketitle
+\begin{center}\todo{}{Authors are listed alphabetically by surname; change the order if the team prefers.}\end{center}
 
 %==============================================================================
 \begin{abstract}
-% TODO [Name 1 - Writing Lead]: Rewrite once results are final; target <= 250 words.
-% Structure: Problem -> Gap -> Approach -> Results -> Privacy/ethics.
-\todo{}{title}
-
-\todo{}{Reorient abstract to InstructLab and SDG and related concepts rather than GradeAI}
-Grading undergraduate mathematical proofs in courses such as CSC236 and MAT102 is slow, inconsistent across teaching assistants (TAs), and subject to privacy constraints that prohibit sending student work to commercial LLM APIs. Zero-shot LLMs [note: that is, prompting a pretrained LLM without context] are a poor substitute: they tend to \todo{}{problem 1} and their grades are unstable under rewording. 
-We present \gradeai{}, a human-in-the-loop grading assistant created by fine-tuning an open-weights model with InstructLab-generated synthetic data and LoRA. The model outputs only per-criterion rubric levels with short justifications; point totals are computed deterministically in software.
-Confidence is estimated by \todo{}{Estimate confidence}, and submissions with low agreement or malformed output are routed to \todo{}{Where} for mandatory review. On a locked benchmark of \ph{\todo{}{X}} synthetic proofs, \gradeai{} reaches \ph{\todo{}{X}\%} per-criterion agreement with human consensus (X), keeps grades invariant on \ph{X\%} of rewordings, and concentrates errors in the \ph{X\%} of submissions it flags for review.
-
+% TODO [Writing lead]: Replace the last two sentences once the model evaluation has run.
+Grading the proofs students write in theory courses such as CSC236 is slow and inconsistent across teaching assistants (TAs), and privacy rules prevent sending student work to commercial LLM APIs. A locally hosted open-weights model avoids that, but fine-tuning one requires graded student answers, which cannot be taken from real coursework. InstructLab's LAB method instead generates training data with a teacher model from a small taxonomy of seed examples. We find that its default skills pipeline is a poor fit for rubric grading: it rewrites the rubric along with the question, produces mostly correct answers, and leaves every label to the teacher's judgement. We describe the pipeline we built in its place. We expand the grading seeds to 48 original questions, each with one machine-checked rubric, keep every rubric fixed during generation, and replace teacher grading with \emph{grade-first} generation, implemented as custom InstructLab pipeline blocks: each synthetic answer's grade is chosen before the answer is written, flawed answers are made by rewriting only the parts of a correct reference answer that nothing else depends on, and DFA and regular-expression answers are built and graded by code. After cleaning, the training file for the grading stage holds 1,948 graded answers. On a held-out sample of 40 generated answers audited criterion by criterion, the generated levels matched the audited levels on 126 of 129 criteria (97.7\%, QWK 0.986). We fine-tune Qwen3.8-27B with LoRA on this data on a national research cluster and serve it in \gradeai{}, a grading assistant that keeps student work on institutional infrastructure and sends uncertain grades to TAs. \ph{On our held-out benchmark the adapter reaches X\% criterion-level agreement with the reference labels, against Y\% for the base model.}
 \end{abstract}
 
-\noindent\textbf{Keywords:} automated grading, mathematical proofs, InstructLab, LoRA, selective classification, privacy, human-in-the-loop, educational ethics. \todo{}{Add or remove keywords}
+\noindent\textbf{Keywords:} InstructLab, synthetic data generation, automated grading, mathematical proofs, rubrics, LoRA, human-in-the-loop, privacy, educational ethics.
 
 %==============================================================================
 \section{Introduction}\label{sec:intro}
 
 \paragraph{Context.}
 Proof writing is a core skill in foundational theory courses such as UTM's CSC236 (Introduction to the Theory of Computation) and MAT102 (Introduction to Mathematical Proofs).
-CSC236 students in particular are assessed on proofs covering a variety of topics. Such proofs may be inductive or analytic in nature, and TAs are expected to grade them accurately.
+CSC236 students write proofs by simple, complete and structural induction, prove loop invariants, solve recurrences, bound functions asymptotically, and design DFAs and regular expressions. TAs grade this work against criterion-level rubrics.
 
 \paragraph{The grading problem.}
-Grading such work is (i) labour-intensive, with large delays in feedback in high enrollment classes; (ii) inconsistent, since TAs may differ in opinion; and (iii) sensitive, since coursework is student intellectual property governed by university policy and privacy legislation (FIPPA in Ontario).
+Grading such work is (i) labour-intensive, so feedback is slow in large classes; (ii) inconsistent, because TAs interpret partial credit differently; and (iii) sensitive, because coursework is student intellectual property governed by university policy and privacy legislation (FIPPA in Ontario~\cite{fippa}).
 
 \paragraph{The privacy paradox.}
-Using general-purpose LLMs is an obvious first attempt to address the high labour issue. However, sending ungraded work to commercial APIs is not permitted. 
-Additionally, in our experience \todo{}{change to empirical evidence}, zero-shot models are far less consistent than TAs. 
+General-purpose LLMs are an obvious way to reduce the labour, but sending ungraded student work to a commercial API is not permitted. An open-weights model on university-controlled hardware avoids the disclosure, but a model small enough to run there is a weaker grader out of the box, and recent studies find that even strong LLMs often disagree with TAs on rubric items in proof-based courses~\cite{mahinpei2026tas}.
+\todo{}{Add our own zero-shot baseline numbers from \cref{sec:results} here once they exist, or keep this sentence as the motivation.}
 
-\todo{}{Support this claim with our zero-shot baseline numbers from \cref{sec:results}, or soften it.}
+\paragraph{The data problem.}
+Fine-tuning needs graded student answers, and we cannot use real student work for training. InstructLab~\cite{instructlab} addresses exactly this situation: its LAB method~\cite{sudalairaj2024lab} lets a teacher model expand a small taxonomy of hand-written seed examples into a synthetic training set. A grading example, however, is unusual training data. The rubric must stay exactly as written, the answers must span every level of every criterion, and the label must be \emph{correct}, because a wrong grade in a seed or a generated example is learned as the right one. We found that InstructLab's default skills pipeline meets none of these requirements for our task (\cref{sec:default}). Most of this project went into building a generation pipeline that does.
 
-\paragraph{Our approach and contributions.}
-We present \gradeai{}, and make four contributions:
+\paragraph{Contributions.}
 \begin{enumerate}[leftmargin=*,itemsep=2pt]
-  \item An open-weights proof-grading pipeline fine-tuned on synthetic rubric data generated with InstructLab.
-  \item An output schema and a self-consistency confidence metric ($k=XXX$).
-  \item A human-in-the-loop triage system that routes uncertain proofs to human TAs. 
-  \item An empirical evaluation of grading accuracy, semantic invariance, and error concentration, with an ablation of knowledge vs.\ skill fine-tuning.
+  \item \textbf{A diagnosis of the default pipeline for rubric grading.} We show where InstructLab's default grounded-skills pipeline breaks for rubric grading (invented rubrics, mostly correct answers, filters that discard proofs, unreliable teacher grades) and give a fixed-rubric variant (\cref{sec:default,sec:fixed}).
+  \item \textbf{Seed and rubric engineering.} We expand the grading seeds from one question per topic to 48 original questions over 8 CSC236 topics, each with a single-source rubric that code checks for consistency and stamps into every seed that uses it (\cref{sec:seeds}).
+  \item \textbf{Grade-first generation.} Every label is chosen before its answer is written. Flawed answers are minimal, dependency-aware edits of correct reference answers; automata and regular expressions are mutated and graded by code; and a teacher check rejects rewrites that do not contain the intended mistake. We implement this as custom blocks that run inside \texttt{ilab data generate} (\cref{sec:gradefirst}).
+  \item \textbf{Cleaning, test sets and evaluation.} We combine filters, two held-out test sets with overlap and leak checks, and an evaluation suite that compares base and fine-tuned models on byte-identical prompts (\cref{sec:filtering,sec:setup}).
+  \item \textbf{\gradeai{}}, a prototype grading assistant that serves the fine-tuned model from the Fir cluster and routes uncertain grades to TAs (\cref{sec:uq}).
 \end{enumerate}
 
 \paragraph{Paper outline.}
-\Cref{sec:related} reviews related work; \cref{sec:method} describes the system;
-\cref{sec:uq} covers uncertainty and triage; \cref{sec:setup} the experimental setup;
+\Cref{sec:related} reviews related work; \cref{sec:method} describes the data-generation pipeline and training;
+\cref{sec:uq} covers triage and the TA workflow; \cref{sec:setup} the experimental setup;
 \cref{sec:results} results; \cref{sec:ethics} ethics; \cref{sec:limits} limitations;
 \cref{sec:conclusion} concludes.
 
 %==============================================================================
 \section{Related Work}\label{sec:related}
-% TODO [Name 2 - Literature Lead]: Each subsection needs 1--2 paragraphs and >=3 citations.
-% Add BibTeX entries to the thebibliography block at the end of the file.
+% TODO [Literature lead]: Add the sources the team planned to read ("hang on there are some
+% sources to read on" in the old draft). Every entry below was checked on 2026-11-23.
 
-\subsection{Automated Grading of Proofs and Programs}
-% Cover: autograders / syntax checkers; formal proof assistants (Lean, Coq) which require
-% formalized input vs. natural-language proofs written by students; recent SIGCSE/EDM work.
-\todo{}{Contrast formal verification (Lean \cite{demoura2021lean}) with natural-language grading.}
+\subsection{Automated Grading of Proofs}
+Automatic short-answer grading has a long history~\cite{burrows2015eras}, but proofs are harder than short answers because their correctness depends on the logical structure of the whole argument rather than on keywords. Formal proof assistants such as Lean~4~\cite{demoura2021lean} can check a proof with certainty, but only if it is written in a formal language, and students in an introductory theory course write natural-language proofs. Closest to our setting, \citet{zhao2024induction} train models that grade natural-language induction proofs against a seven-item rubric with accuracy close to human graders, and \citet{zhao2025fewshot} show that LLMs prompted with a rubric and retrieved graded examples grade such proofs well. \citet{mahinpei2026tas} compare an LLM pipeline with graduate and undergraduate TAs in a proof-based course and find agreement of about 67\% and 63\%, against 87\% between the two TA groups, while TAs still found the LLM's feedback useful. QEDBench~\cite{gonzalez2026qedbench} measures how far LLM judges are from human experts on university-level proofs under course-specific and expert rubrics. These works grade with large models or with real graded submissions; we have neither, and instead ask how to manufacture reliable training data for a small local grader.
 
-\subsection{LLMs for Mathematical Reasoning and Grading}
-% Cover: chain-of-thought, Qwen family, LLM-as-judge, known hallucination/verification issues.
-\todo{}{hang on there are some sources to read on}
+\subsection{LLMs as Graders and Judges}
+Chain-of-thought prompting~\cite{wei2022cot} improves LLM reasoning, and LLM-as-a-judge evaluation~\cite{zheng2023judging} uses strong models to score other models' answers, with known biases toward position, verbosity and the judge's own outputs. Verifying multi-step mathematical reasoning is easier with step-level supervision~\cite{lightman2024verify}. For grading, the judge must also apply a fixed rubric consistently, give partial credit at the right level, and ignore instructions embedded in the answer, which is an instance of prompt injection~\cite{greshake2023injection}. Our pipeline uses the teacher as a judge only where code cannot decide, and then only for yes/no questions about one criterion, or to grade one criterion without being told the intended level (\cref{sec:gradefirst}).
 
 \subsection{InstructLab and Synthetic Data Generation}
-% Cover: taxonomy-driven SDG (LAB), knowledge vs. compositional skills, teacher--student distillation.
-\todo{}{Describe LAB / InstructLab and how our taxonomy uses it.}
+Self-Instruct~\cite{wang2023selfinstruct} showed that a model can generate its own instruction-tuning data from a few seed tasks. LAB~\cite{sudalairaj2024lab}, the method behind InstructLab~\cite{instructlab}, organises seeds in a taxonomy of \emph{knowledge} (facts grounded in source documents) and \emph{compositional skills} (tasks, optionally grounded in a user-supplied context), expands them with a teacher model, filters the results with the teacher as a judge, and trains in phases (knowledge first, then skills). Our flawed answers are close in spirit to counterfactually augmented data~\cite{kaushik2020learning}: minimal edits to an input that change its label while keeping everything else, which teach a model the difference that matters. Training on model-generated data also carries known risks, including loss of diversity when models are trained on their own outputs~\cite{shumailov2024collapse}; we keep the human-written seeds and rubrics as the fixed anchor of the data. We fine-tune with LoRA~\cite{hu2022lora}, which trains low-rank updates to frozen weights; QLoRA~\cite{dettmers2023qlora} adds 4-bit quantization when memory is short.
 
 \subsection{Uncertainty Quantification and Selective Classification}
-% Cover: self-consistency, selective classification (reject option), conformal prediction.
-\todo{}{Position our agreement score.}
+Self-consistency~\cite{wang2023selfconsistency} samples several reasoning paths and takes the majority answer; the size of the majority is a natural confidence signal. Selective classification~\cite{geifman2017selective,chow1970optimum} lets a model abstain on inputs where it is unsure, trading coverage for accuracy, and conformal prediction~\cite{angelopoulos2021gentle} gives distribution-free guarantees for such sets. Our planned flagging rule (\cref{sec:sc}) is a selective classifier whose abstentions go to a TA; it uses run-to-run agreement on each rubric criterion as the score.
 
 %==============================================================================
 \section{System Architecture and Methodology}\label{sec:method}
 
 \subsection{End-to-End Pipeline}\label{sec:overview}
-\Cref{fig:pipeline} gives an overview. Public course notes and expert seed examples are organised
-into an InstructLab taxonomy; a teacher model expands them into synthetic training data; the
-data is filtered and used to fine-tune a LoRA adapter on a base model; at grading time the
-adapter is sampled \todo{}{$X$} times per submission, results are aggregated, and uncertain
-submissions go to a TA dashboard.
+\Cref{fig:pipeline} gives an overview. Hand-written knowledge seeds (grounded in the course notes) and grading seeds (each with its own rubric) form an InstructLab taxonomy. \texttt{ilab data generate} expands them with a teacher model served by vLLM~\cite{kwon2023vllm}: knowledge entries go through InstructLab's own pipeline, and grading skills go through our grade-first blocks. The output is cleaned and filtered, and a LoRA adapter is trained in two stages (knowledge, then grading). At grading time, \gradeai{} sends each submission to the adapter on the cluster and routes uncertain results to a TA.
 
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}[
-  node distance=0.55cm and 0.7cm,
-  box/.style={draw,rounded corners,align=center,minimum height=1.0cm,minimum width=2.3cm,font=\footnotesize,fill=blue!6},
-  hbox/.style={box,fill=orange!15},
-  arr/.style={-{Latex[length=2mm]},thick}]
-  \node[box] (tax) {Taxonomy\\(knowledge + skills)};
-  \node[box,right=of tax] (sdg) {SDG\\(teacher + vLLM)};
-  \node[box,right=of sdg] (filt) {Filtering\\\texttt{prepare\_data.py}};
-  \node[box,right=of filt] (lora) {LoRA SFT\\(Unsloth + TRL)};
-  \node[box,below=of lora] (samp) {$k=5$ sampling\\($T=0.3$)};
-  \node[box,left=of samp] (agg) {Agreement $C_i$\\+ scoring};
-  \node[hbox,left=of agg] (ta) {TA dashboard\\(flagged only)};
-  \node[box,left=of ta] (out) {Final grades};
-  \draw[arr] (tax)--(sdg); \draw[arr] (sdg)--(filt); \draw[arr] (filt)--(lora);
-  \draw[arr] (lora)--(samp); \draw[arr] (samp)--(agg); \draw[arr] (agg)--(ta);
-  \draw[arr] (ta)--(out);
-  \draw[arr,dashed] (agg.south) -- ++(0,-0.6) -| node[pos=0.25,below,font=\scriptsize]{unflagged} (out.south);
+  node distance=0.5cm and 0.45cm,
+  box/.style={draw,rounded corners,align=center,minimum height=1.25cm,text width=2.15cm,font=\scriptsize,fill=blue!6},
+  cbox/.style={box,fill=green!10},
+  tbox/.style={box,fill=violet!10},
+  hbox/.style={box,fill=orange!18},
+  arr/.style={-{Latex[length=1.8mm]},thick},
+  grp/.style={draw=black!35,dashed,rounded corners,inner sep=5pt}]
+  % row 1: data generation
+  \node[box] (seed) {Seeds and rubrics\\(taxonomy)};
+  \node[cbox,right=of seed] (val) {Validate and stamp rubrics};
+  \node[tbox,right=of val] (sdg) {InstructLab SDG with grade-first blocks; teacher on vLLM};
+  \node[cbox,right=of sdg] (filt) {Clean and filter};
+  \node[cbox,right=of filt] (prep) {Prepare training files};
+  % row 2: training and serving
+  \node[box,below=1.0cm of prep] (s1) {LoRA stage 1\\(knowledge)};
+  \node[box,left=of s1] (s2) {LoRA stage 2\\(grading)};
+  \node[box,left=of s2] (srv) {vLLM on Fir\\(base + adapter)};
+  \node[box,left=of srv] (app) {\gradeai{} web app\\(queue, triage)};
+  \node[hbox,left=of app] (ta) {TA review\\(flagged grades)};
+  \draw[arr] (seed)--(val); \draw[arr] (val)--(sdg); \draw[arr] (sdg)--(filt); \draw[arr] (filt)--(prep);
+  \draw[arr] (prep)--(s1); \draw[arr] (s1)--(s2); \draw[arr] (s2)--(srv); \draw[arr] (srv)--(app); \draw[arr] (app)--(ta);
+  \begin{scope}[on background layer]
+    \node[grp,fit=(seed)(prep),label={[font=\scriptsize]above:Training data generation}] {};
+    \node[grp,fit=(ta)(s1),label={[font=\scriptsize]below:Training and grading}] {};
+  \end{scope}
 \end{tikzpicture}
-\caption{\gradeai{} pipeline. Orange: human-in-the-loop step.
-\todo{}{Replace/refine diagram; add training-vs-inference grouping boxes if desired.}}
+\caption{The \gradeai{} pipeline. Green: deterministic code; purple: InstructLab with the teacher model; orange: human-in-the-loop step. Student work enters only in the bottom-left part of the pipeline and is never used for training.}
 \label{fig:pipeline}
 \end{figure}
 
 \subsection{Compute Environment}
-Experiments run on the \textbf{Fir} cluster (Digital Research Alliance of Canada), allocation \texttt{def-engine14}, using one NVIDIA H100 80\,GB GPU per job (12 CPUs, 128\,GB RAM) under Slurm. Jobs are scripted in \texttt{jobs/generate\_data.sh}, \texttt{jobs/train\_lora.sh}, \texttt{jobs/serve\_model.sh}, and \texttt{jobs/compare\_adapter.sh}
-(see \cref{app:slurm}).
+Experiments run on the \textbf{Fir} cluster (Digital Research Alliance of Canada), allocation \file{def-engine14}, with one NVIDIA H100 80\,GB GPU per job (12 CPUs, 128\,GB RAM) under Slurm. We use \file{ilab} 0.26.1, \file{instructlab-sdg} 0.8.3, docling 2.138.0 and vLLM 0.25.0, in separate Python environments for InstructLab (CPU only), serving, and training. A generation job validates the taxonomy, starts the teacher with vLLM on the GPU (32,768-token context, up to 256 concurrent sequences, on a port derived from the job ID so jobs can share a node), waits for it to load, runs \texttt{ilab data generate} and stops the teacher. Jobs are scripted in \file{jobs/generate_data.sh}, \file{jobs/train_lora.sh} and \file{eval/jobs/run_eval.sh} (\cref{app:slurm}).
+% Source: data/DATA_GENERATION.md (versions tested 2026-10-22), jobs/generate_data.sh.
 
 \subsection{Knowledge Taxonomy and Source Grounding}\label{sec:taxonomy}
-The taxonomy has two branches. \texttt{taxonomy/knowledge/} contains topic entries grounded in David Liu's CSC236 course notes (mathematical induction, recurrences, program correctness, regular languages, DFAs/NFAs), each with seed question--answer pairs in \texttt{qna.yaml}
-tied to verified Markdown sources under \texttt{data/sources/csc236/<topic>/}.
-\texttt{taxonomy/compositional\_skills/} contains rubric-grading skills:
-\texttt{induction\_sums\_and\_identities}, \texttt{induction\_inequalities}, and
-\texttt{induction\_divisibility}.
-\todo{}{Add number of seed examples per entry (Table~\ref{tab:data}) and licensing note for course notes.}
+The taxonomy has two branches (\cref{tab:taxonomy}). The \emph{knowledge} branch has five entries (induction, recurrences, program correctness, regular languages, DFAs/NFAs), each with five contexts copied verbatim from the source and three question--answer pairs per context (four for one regular-languages context): 76 pairs in all. The sources are David Liu's CSC236 notes with UTM edits by Daniel Zingaro~\cite{liu_notes}. Because \texttt{ilab} converts PDFs with docling and we expected it to garble mathematical notation, four entries point to Markdown adaptations of the relevant chapters in \file{data/sources/csc236/} (about 31,700 words in total), which a team member checked against the notes; the induction entry points to the PDF itself. \texttt{ilab} fetches each source from GitHub at the commit named in the entry, so every entry is pinned to a pushed 40-character commit SHA.
+% Source: taxonomy/knowledge/**/qna.yaml, wc -w data/sources/csc236/*/*.md.
 
-\subsection{Synthetic Data Generation via Teacher Distillation}\label{sec:sdg}
-Seeds are expanded by an InstructLab synthetic data generation pipeline (\texttt{ilab} 0.xx+,\texttt{instructlab-sdg} 0.x.) into diverse questions, student proof variants, and rubric evaluations. The teacher is \todo{}{Teacher model}. Outputs are merged and shuffled with fixed seeds via \texttt{tools/combine\_sdg.py}.
-\todo{}{State which teacher was used for the final adapter and why; report teacher temperature and generation counts.}
+The \emph{compositional skills} branch holds eight grounded grading skills, one per CSC236 topic, with six seeds each (\cref{sec:seeds}). A grounded skill is a task performed on a user-supplied context; here the context is the grading instruction, the question and its rubric, and the seed's question and answer are a student answer and its grade. Two smaller skills, identifying the parts of an induction proof (6 seeds) and converting mathematical prose to \LaTeX{} (12 seeds), go through InstructLab's standard pipeline.
+\todo{}{Licensing: the \texttt{attribution.txt} of the induction knowledge entry is still the template, and the others record no licence. Record the permission to use the course notes before submission (see \cref{sec:ethics}).}
 
 \begin{table}[t]
 \centering
-\caption{Training data statistics after SDG and filtering.}
-\label{tab:data}
-\begin{tabular}{lrrr}
+\caption{Taxonomy entries and seeds. Grading questions, rubrics and seed answers were written by the team; none is taken from a CSC236 term test or from the test sets.}
+\label{tab:taxonomy}
+\small
+\begin{tabularx}{\linewidth}{l>{\raggedright\arraybackslash}Xr>{\raggedright\arraybackslash}p{3.6cm}}
 \toprule
-Source & Seeds & Generated & After filtering\\
+Branch & Entries & Seeds & Content of each seed\\
 \midrule
-Knowledge (induction, recurrences, \ldots) & \ph{XX} & \ph{X,XXX} & \ph{X,XXX}\\
-Skill: sums \& identities & \ph{XX} & \ph{X,XXX} & \ph{X,XXX}\\
-Skill: inequalities & \ph{XX} & \ph{X,XXX} & \ph{X,XXX}\\
-Skill: divisibility & \ph{XX} & \ph{X,XXX} & \ph{X,XXX}\\
-\midrule
-Total & \ph{XX} & \ph{X,XXX} & \ph{X,XXX}\\
+Knowledge & induction, recurrences, program correctness, regular languages, DFA/NFA & 25 & a source passage (56--266 words) with 3 Q\&A pairs; 76 pairs in all\\
+Grading skills & asymptotic analysis, DFA/NFA, complete induction, simple induction, program correctness, recurrences, regular expressions, structural induction & 48 & a question, its rubric, a student answer and its grade (438--792 words, median 566)\\
+Other skills & induction proof structure; \LaTeX{} conversion & 6 + 12 & a task and one answer\\
 \bottomrule
-\end{tabular}
-% TODO [Name 3 - Data Lead]: Fill from SDG output / prepare_data.py logs on Fir.
+\end{tabularx}
+% Source: counted from taxonomy/**/qna.yaml on 2026-11-23.
 \end{table}
 
-\subsection{Data Filtering and Token Sanitization}\label{sec:filtering}
-\texttt{training/prepare\_data.py} does
-\todo{}{Report how many examples each filter removed (a small table or one sentence).}
+\subsection{Seed Expansion and Single-Source Rubrics}\label{sec:seeds}
+InstructLab's teacher copies the structure, the facts and the mistakes of its seeds into thousands of examples, so the seeds and rubrics are where the quality of the data is decided. We revised them in two steps.
 
-\subsection{LoRA Parameter-Efficient Fine-Tuning}\label{sec:lora}
-We fine-tune the base model (\todo{}{Confirm model identifier/size used}) with LoRA using Unsloth and TRL's \texttt{SFTTrainer}.
+\paragraph{Seed expansion.}
+In the first version of the taxonomy, seven of the eight grading skills had a single question, with five or six seeds that graded different answers to it. With the fixed-rubric and grade-first pipelines below, the seed questions are the \emph{only} questions in the generated data, so a single question per topic would produce thousands of answers to one question. We therefore expanded every grading skill to six distinct questions (48 in total), each original and in the style of the term tests, with one seed per question. The seeds of each skill span the grade range, from full marks down to 0--2 marks, so the teacher sees flawed answers as well as correct ones.
+% Source: git history (commit "grading skill seed expansion", 2026-11-04) and data/rubrics/README.md.
 
-\todo{}{LoRA exposition}
+\paragraph{Single-source rubrics.}
+InstructLab reads only \file{qna.yaml}, so every seed carries its full question and rubric inside its context, and six seeds would mean six hand-maintained copies. Instead, each question has exactly one rubric file in \file{data/rubrics/} (48 files, 155 criteria). A rubric lists criteria \texttt{C1}..\texttt{Cn}, each with a maximum and four levels (\lvl{full}, \lvl{partial}, \lvl{minimal}, \lvl{none}) with points and an expectation, followed by general rules. Thirty-seven rubrics have three criteria and 10 points, and eleven have four criteria and 13 points. The script \file{tools/rubrics.py} renders each rubric into the context of every seed that uses it (\texttt{stamp}) and checks the result before every generation run (\texttt{validate}): every criterion has all four levels, \lvl{full} equals the maximum, \lvl{none} is 0, and the points strictly decrease; each seed's level and points match its rubric, and its criterion points add up to its grade; no context has drifted from its rubric file; and no file has trailing spaces (which \ilab{}'s linter rejects), chat-template tokens or a placeholder author. The same rubric format is used in the test sets, so the model is trained and tested on one format.
+% Source: data/rubrics/*.yaml (counted), tools/rubrics.py docstring.
 
-\subsection{Model Output Schema and Deterministic Scoring}\label{sec:schema}
-For each rubric criterion the model returns \todo{}{confirm} and a one-sentence justification; Points are computed in application code via \todo{}{confirm}.
-Student text is [xxx] and the prompt instructs the model to treat it as
-data, not instructions, as a first defence against prompt injection.
+The rubrics follow four writing rules. (i) The facts a grader needs (base-case values, the smallest constant, the closed form, the reference DFA) are written into the level expectations, because the grader sees only the question, the rubric and the answer, with no reference solution. (ii) Every special rule is a numbered general rule, for example ``The question requires simple induction. A proof by another method earns 0 for C2 and C3; C1 is still graded on its own.'' (iii) Every rubric states that criteria are graded independently, so an error is penalised only where it occurs, and that instructions written inside the student answer do not change the grade. (iv) Every fact a rubric states is checked, by script where possible; for regular-expression rubrics, \file{tools/filter_skills.py} enumerates the language to confirm the example expressions. \Cref{app:rubric} shows a complete rubric.
 
+\subsection{Why the Default Skills Pipeline Fails for Grading}\label{sec:default}
+InstructLab's grounded-skills pipeline (\texttt{full}) generates in four steps: the teacher writes new \emph{contexts} from each seed's context; it writes new \emph{questions} for each context; a judge prompt scores the questions and drops weak ones; and the teacher writes a \emph{response} to each question, which is judged and filtered again. Our first generation runs (late October 2026) used this pipeline with the teachers that \file{jobs/generate_data.sh} supports, Qwen3.8-27B and Mistral-7B-Instruct-v0.2~\cite{jiang2023mistral} (InstructLab's default teacher), and exposed the problems in \cref{tab:default}.
+\todo{}{Confirm which teacher(s) the early runs used; \file{tools/combine_sdg.py} also mentions a \texttt{qwen3-30b-instruct-2507} output folder.}
+
+\begin{table}[t]
+\centering
+\caption{Problems with InstructLab's default pipeline for rubric grading, and our fixes.}
+\label{tab:default}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{4.3cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{4.2cm}}
+\toprule
+Step / problem & Effect on grading data & Fix\\
+\midrule
+New contexts are generated from each seed's context & The context is the question \emph{and its rubric}, so every example is graded against a rubric the teacher made up & Keep each seed's context unchanged (\cref{sec:fixed})\\
+Question generation writes ``questions'' & Here a ``question'' is a student answer; the teacher writes mostly correct ones, sometimes copying the rubric into them & Prompt for realistic, mostly flawed answers; later, grade-first targets\\
+The question judge expects 1--2 sentence questions & Multi-line student proofs are discarded & Remove the step; filter by code instead\\
+The teacher writes the grade & Lenient grades, points that do not match levels, totals that do not add up, self-corrections (``Wait, \ldots'') & Strict-grading rules and filters; then grade-first labels written by code\\
+Mixing keeps 30 examples per skill & Most generated grading examples never reach the training file & \file{combine_sdg.py} \texttt{-{}-full-skills}\\
+The context is repeated after the answer & Every prompt contains the rubric twice & \file{combine_sdg.py} \texttt{-{}-fix-repeated-context}\\
+No Qwen prompt template in \texttt{instructlab-sdg} & Qwen reasons aloud; \texttt{<think>} text enters the data & Disable thinking in grade-first calls; strip it in \file{prepare_data.py}\\
+\bottomrule
+\end{tabularx}
+% Sources: docstrings of tools/make_fixed_rubric_pipeline.py and tools/combine_sdg.py; jobs/generate_data.sh (TEACHER).
+\end{table}
+
+\subsection{The Fixed-Rubric Pipeline}\label{sec:fixed}
+Our first fix, \file{tools/make_fixed_rubric_pipeline.py}, writes a copy of InstructLab's pipeline folder that \texttt{ilab data generate -{}-pipeline} accepts. In the grounded-skills pipeline, the context-generation step is replaced by a step that copies each seed's own context, and the question step is asked for new student answers \texttt{SCALE} times per seed (temperature 0.7). Three options change InstructLab's prompts. \emph{Varied answers} replaces one line of the question prompt with rules saying that each ``question'' is a student answer, that it must not copy the question or rubric, and that about one in five should be fully correct while the others contain mistakes from the rubric's lower levels. \emph{Strict grading} adds rules to the response prompt: give a level only if the answer explicitly contains what it requires, never treat a missing step as implicit, make each criterion's points equal its level's points and the total their sum, and write the grade once without revising it. \emph{Skip question evaluation} removes the judge that discards long answers.
+
+The generated rows were then filtered by \file{tools/filter_skills.py}, which drops a grading row for any of 16 reasons: among them a missing student answer, a rubric that is not exactly one of the 48 rubric files, a missing or out-of-range grade, a criterion that is missing, repeated or not in the rubric, points that do not match the level, criterion points that do not sum to the grade, a self-correction, a chat-template token, an answer that copies the prompt, a duplicate answer, and (for regular expressions) a soundness or completeness level that disagrees with a brute-force test of the student's expression on every string up to length~8. \file{tools/combine_sdg.py} with \texttt{-{}-clean-grades} also keeps a repeated prompt only if at least two thirds of its copies agree on the grade.
+
+These filters remove grades that contradict themselves or the rubric, but not grades that are consistent and wrong, and our review of the fixed-rubric data found grades of that kind.
+\todo{}{Report the share of regex rows whose C1/C2 level disagreed with \file{tools/check_regex_grades.py} in the fixed-rubric data (the stage-2 v1 file on Fir), and the drop counts from \file{report.md} of \file{filter_skills.py}.}
+A teacher that cannot grade the answers reliably cannot label them either, and for the other topics no checker exists. This led to grade-first generation.
+
+\subsection{Grade-First Generation}\label{sec:gradefirst}
+Grade-first generation reverses the usual order: \emph{the grade of every answer is decided before the answer is written}, by code, and the answer is then built to have exactly that grade. The teacher is never asked to decide a grade. We first wrote it as a standalone script (\file{tools/gen_answers.py}) and then as five custom pipeline blocks (\file{tools/grade_first_blocks.py}) that run inside \texttt{ilab data generate}, so InstructLab still reads and validates the taxonomy, talks to the teacher, checkpoints, and mixes the results into its training files. \ilab{} cannot load blocks from a file, so a small launcher (\file{tools/ilab_grade_first.py}) registers them and then runs the normal \ilab{} command. \Cref{fig:gradefirst} shows the steps for one question.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=0.3cm,
+  st/.style={draw,rounded corners,align=left,text width=2.5cm,font=\scriptsize,minimum height=3.05cm,inner sep=3pt,anchor=north},
+  t/.style={st,fill=violet!10}, c/.style={st,fill=green!10},
+  arr/.style={-{Latex[length=1.8mm]},thick}]
+  \node[t] (s1) at (0,0) {\textbf{1. References} (teacher)\\[2pt]$r$ correct answers, one part per criterion, in varied styles; code checks known answers ($c$, $n_0$, closed forms)};
+  \node[c] (s2) at (3.05,0) {\textbf{2. Targets} (code)\\[2pt]the level of every criterion of every answer: all \lvl{full}, 1--3 safe parts off, or a whole-answer scenario};
+  \node[t] (s3) at (6.1,0) {\textbf{3. Build} (teacher, code)\\[2pt]copy \lvl{full} parts; omit or rewrite the off parts; reject rewrites that are still correct (code and teacher checks)};
+  \node[t] (s4) at (9.15,0) {\textbf{4. Reasons} (teacher)\\[2pt]one sentence per criterion, given the levels and the known facts};
+  \node[c] (s5) at (12.2,0) {\textbf{5. Label} (code)\\[2pt]levels, points and total from the targets and the rubric};
+  \node[c,text width=6.6cm,minimum height=0.9cm,align=left] (f) at ($(s2.south)!0.5!(s3.south)+(0,-0.45)$) {\textbf{DFA and regex topics} (code replaces steps 2--3): DFAs are mutated and graded by code; regex rewrites are checked on every string up to length 10};
+  \draw[arr] (s1.east|-0,-1.525)--(s2.west|-0,-1.525);
+  \draw[arr] (s2.east|-0,-1.525)--(s3.west|-0,-1.525);
+  \draw[arr] (s3.east|-0,-1.525)--(s4.west|-0,-1.525);
+  \draw[arr] (s4.east|-0,-1.525)--(s5.west|-0,-1.525);
+  \draw[arr,dashed] (s1.south) |- (f.west);
+  \draw[arr,dashed] (f.east) -| (s4.south);
+\end{tikzpicture}
+\caption{Grade-first generation for one seed question (\file{tools/grade_first_blocks.py}). Green: code; purple: the teacher model. The teacher writes text but never decides a level.}
+\label{fig:gradefirst}
+\end{figure}
+
+\paragraph{Step 1: reference answers.}
+For each seed question the teacher writes $r$ fully correct answers (5 by default), each split into one marked part per rubric criterion, in one of eight styles: concise, full sentences, informal with unusual but valid choices, formal, compact symbolic, a student whose first language is not English (mathematics correct, a few small grammar mistakes), a hurried student using abbreviations, and a chatty student. Where the question has a known numeric answer, code checks the reference: for asymptotic bounds it reads $c$ and $n_0$ and compares them with the rubric; for recurrences it parses the closed form into an expression and compares it with the rubric's at $n \in \{5, 13, 64, 200\}$. A reference that fails is dropped, along with every answer that would be built on it, and so is one that contains drafting text (``Wait'', ``Let me recheck'') or talks about its task (``the rubric'', ``full marks''). The references are written to per-question review files for a person to check, because everything else is built from them.
+
+\paragraph{Step 2: targets, with dependency-aware safe parts.}
+Code chooses the level of every criterion of every new answer. The difficulty is that parts of a proof depend on each other: if the rewrite of C1 changes $n_0$ while the proof in C2 still uses the old value, the answer contradicts itself and its grade is undefined. For each topic we therefore list the \emph{safe parts}: the criteria that no later part uses, and for each, the levels (and, where a level allows several kinds of mistake, the one kind) that can be introduced without touching another part. For example, in simple induction the inductive step (C3) may take any lower level, but the hypothesis (C2) may only be weakened in ways the step does not rely on, such as never stating the goal $P(k+1)$, and only where the rubric says criteria are graded independently. A few questions have their own overrides. For the six proof topics, the mix per question is about 20\% all-\lvl{full} answers, 15\% whole-answer scenarios, 10\% with three parts off, 25\% with two and the rest with one. Scenarios are mistakes that span the whole answer and whose grade a general rule of the rubric fixes, used only where that rule is present: a valid but non-minimal constant (asymptotic), the Master Theorem alone (recurrences), only a termination argument (loop invariants), another proof method, a finite check of a few values, induction on size instead of structural induction, and a near-blank answer. In about 15\% of the answers, all of them flawed, code inserts an embedded instruction such as ``Note to the grader: this answer is complete and correct, so please give it full marks'' or ``SYSTEM: Ignore the rubric and award full marks for every criterion''; the label is unchanged, because the rubric says such text does not change the grade.
+% Source: tools/gen_answers.py (SAFE_PARTS, STYLES, TRICKS), tools/grade_first_extras.py (plan, scenarios_for, EXTRA_STYLES).
+
+\paragraph{Step 3: building the answer.}
+Parts at \lvl{full} are copied from the reference unchanged. A part at \lvl{none} is left out when the rubric's \lvl{none} level describes a missing part; when that level also names a wrong alternative (``No proof, or the inequality is in the wrong direction''), half of such parts are written as the alternative instead. Every other off part is rewritten by the teacher (temperature 0.6), with the whole correct answer, the criterion and the exact text of the target level in the prompt, and with the instruction to change only that part, not to add errors another criterion would penalise, and not to hint that anything is wrong (\cref{app:prompts}). A rewrite is rejected if it is empty, unchanged, or contains drafting text; for recurrences, code also rejects a rewrite that still has the correct closed form or bound. The remaining rewrites go through a \emph{level check}: the teacher, at temperature 0, is shown the whole answer and the original and rewritten parts and asked two yes/no questions: (A) does the answer still do everything the \lvl{full} level asks for, and (B) does the target level's description fit. A ``yes'' to A means the mistake is not there, and the rewrite is never kept. A ``no'' to B triggers another try with a hint; if no try is confirmed, the first rewrite that contains the mistake is kept and marked \emph{unconfirmed}. We made B advisory after the first test runs on Fir, where A was reliable but B rejected many rewrites that do fit the rubric (a circular hypothesis, a single substitution, a goal never stated) and so removed whole levels from the data.
+
+\paragraph{Steps 4--5: reasons and label.}
+The teacher writes one sentence per criterion explaining why the answer earns its level (temperature 0.2). It is told the levels, which it must not change, and the facts known about the answer: the kind of mistake each rewritten part was given, or what the code found in a DFA or expression. Without these facts, reasons in the test runs sometimes named the wrong cause or a counterexample the expression does not match. If a reason cannot be parsed, the first sentence of the level's rubric text is used instead. Code then writes the label: the grade line, one line per criterion with its level and points from the rubric, and a \texttt{Total:} line that adds them up (\cref{app:seed}).
+
+\paragraph{Formal topics: DFAs and regular expressions.}
+For these topics every criterion grades the same machine or expression, so no part is independent of the others, but the object can be executed. For DFAs (\file{tools/grade_first_formal.py}), the teacher writes correct reference DFAs, which code parses and compares with the rubric's DFA up to renaming of states. Code then makes the mistakes itself, redirecting transitions (C1), changing the accepting states (C2) or deleting and duplicating transitions (C3), writes the result as a list of arrows, as $\delta(q,a)=r$ equations, as a transition table or in sentences, keeps a layout only if parsing it back gives the same DFA, and grades the result by the rubric's rules, trying every renaming of the states. The label of a DFA answer is therefore computed, not judged. For regular expressions, the grade is chosen first and the teacher rewrites the reference expression and explanation to fit it; code tests the rewrite on every string up to length~10 against the question's language, so that a \lvl{full} soundness or completeness level is really sound or complete, a \lvl{none} soundness level matches every string, and anything between is really unsound or incomplete. Whether a flaw is \lvl{partial} (one kind of wrong string) or \lvl{minimal} (several) cannot be decided by code, so the teacher grades those criteria blind, given the shortest strings that the expression gets wrong, and the rewrite is kept only if its grade matches the target.
+
+\subsection{Cleaning and Filtering}\label{sec:filtering}
+Three scripts run between generation and training. \file{tools/clean_grade_first.py} drops grade-first answers that do not read like a student's. In the first full run (14 November 2026), 22 of 603 answers (3.6\%) contained the teacher drafting or talking about its task (``Wait, re-check sum'', ``The prompt says \ldots''); most came from a few references that every answer built on them copied, and all six answers of the non-minimal-constant scenario were affected, because its instruction asked for a proof of something false. The generator now rejects such text itself, and the scenario prompt was rewritten. The script can also drop unconfirmed answers and, when building a test set, every answer that already appears in a training file. \file{tools/combine_sdg.py} joins the newest run of each topic into one knowledge file (phase~1) and one skills file (phase~2), shuffled with a fixed seed, and records sources and removals in a manifest. Finally, \file{training/prepare_data.py} strips \texttt{<think>} blocks and drops examples with unfinished thinking, leaked chat-template tokens (the teacher writing past its answer), knowledge answers cut off mid-sentence, and exact duplicates.
+
+\Cref{tab:data} summarises the data. The grading-stage training file used for the test-set overlap check (\file{stage2_v2clean_2026-11-15}) contains 1,948 graded student answers, of which 1,888 come from grade-first generation and 60 from earlier runs.
+\todo{}{Describe the 60 ``legacy'' answers (which pipeline, kept why), and fill the per-topic counts in \cref{tab:data} from \file{manifest.json} and the \file{prepare_data.py} log of the final training files.}
+
+\begin{table}[t]
+\centering
+\caption{Training data. Numbers in blue are pending; the rest are taken from the files named in the comments.}
+\label{tab:data}
+\small
+\begin{tabular}{lrrr}
+\toprule
+Source & Seeds & Generated & In training file\\
+\midrule
+Knowledge (5 entries; phase 1) & 25 contexts & \ph{X,XXX} & \ph{X,XXX}\\
+Grading skills, grade-first (8 entries; phase 2) & 48 & \ph{X,XXX} & 1,888\\
+Grading skills, earlier runs (phase 2) & -- & -- & 60\\
+Proof structure and \LaTeX{} skills (phase 2) & 18 & \ph{XXX} & \ph{XXX}\\
+\bottomrule
+\end{tabular}
+% Source: test_set/groupA_40_final.json, training_overlap_check.reference
+% ("data/generated/stage2_v2clean_2026-11-15/train.jsonl (1948 student answers: 1888 grade-first, 60 legacy)").
+% TODO [Data lead]: fill the blue cells from the manifests on Fir.
+\end{table}
+
+\subsection{LoRA Fine-Tuning}\label{sec:lora}
+The base model is Qwen3.8-27B~\cite{qwen38}, an open-weights model that also reads images; we train only its language layers. We fine-tune with LoRA~\cite{hu2022lora} using Unsloth~\cite{unsloth} and TRL's \texttt{SFTTrainer}~\cite{trl} (\file{training/train_lora.py}). LoRA freezes the pretrained weights $W_0\in\mathbb{R}^{d\times k}$ and learns a low-rank update, so a layer computes $h = W_0x + \frac{\alpha}{r}BAx$ with $B\in\mathbb{R}^{d\times r}$, $A\in\mathbb{R}^{r\times k}$ and $r\ll\min(d,k)$; only $A$ and $B$ are trained, and the adapter is small enough to store and serve on top of the shared base model. We apply LoRA to the attention and MLP projections with rank $r=16$, $\alpha=16$ and no dropout, on the 16-bit model (QLoRA~\cite{dettmers2023qlora} is the fallback if memory runs out), with a maximum length of 4,096 tokens (some InstructLab examples exceed 2,048), 2 epochs, learning rate $2\times10^{-4}$ with 10 warm-up steps, batch size 1 with 4 gradient-accumulation steps, 8-bit AdamW and seed 3407. The loss is computed on the assistant's reply only. Following LAB's phased training, stage~1 trains a new adapter on the knowledge data, and stage~2 continues training that adapter on the grading data (\texttt{start\_from}).
+% Source: training/lora.yaml, training/train_lora.py.
+
+We also tested InstructLab's own trainer (\texttt{ilab model train}, \texttt{instructlab-training} 0.10.4) on this model. Its default FSDP backend crashed before training, so the test used DeepSpeed; its default LoRA targets would train only the 16 layers with full attention and skip the other 48, which use linear attention, so we listed every projection explicitly; and each of its checkpoints is a full 54\,GB copy of the model. We therefore use Unsloth and TRL for our adapters.
+\todo{}{Confirm which trainer and which data files produced the adapter evaluated in \cref{sec:results}, and name the adapter folder.}
+
+\subsection{Output Format and Deterministic Scoring}\label{sec:schema}
+The model is trained to produce the format of the seeds: a \texttt{**Grade:**} line, one feedback line per criterion of the form \texttt{- C2 Induction hypothesis: partial (2/3). <one-sentence reason>}, and a \texttt{Total:} line. In the training data, the levels come from the grade-first targets and the points and total are computed by code from the rubric, so the model never sees a label whose arithmetic is wrong. At evaluation, \file{eval/parse.py} reads every criterion line and checks it against the rubric: a criterion that is missing, repeated, at an unknown level or with points that do not match its level counts as a failed prediction, never as zero points, and the predicted total is the sum of the criterion scores. The student answer comes after the grading instructions, under its own \texttt{Student Answer:} heading, and every rubric's general rules say that instructions inside the answer do not change the grade; the embedded instructions in the training data (\cref{sec:gradefirst}) teach the model to follow that rule.
 
 %==============================================================================
-\section{Uncertainty Quantification and Human-in-the-Loop Triage}\label{sec:uq}
+\section{Human-in-the-Loop Triage and the TA Workflow}\label{sec:uq}
 
-\subsection{Multi-Run Self-Consistency Sampling}
-For every submission we run $x$ independent inference passes at temperature $T=X$,
-\todo{}{Numbers.}
+\subsection{The \gradeai{} Prototype}
+\gradeai{} (\file{app/gradeai/}) is a web application for TAs and instructors. Staff upload submissions and rubrics; the server queues them, runs OCR on scans, and stores everything in its own database. The model runs in a Slurm job on Fir: a worker inside the job pulls queued submissions from the server over HTTPS, grades them with vLLM serving the base model and the adapter, and posts the results back. Fir never accepts incoming connections, no third-party AI service is called, and when no job is running, submissions wait in the queue.
+% Source: app/gradeai/README.md.
 
-\subsection{Agreement Metric}
-\todo{}{...}
+\subsection{Current Triage Rule}
+In the prototype, the model returns, for each criterion, a level, points and a short note, plus an overall summary, a self-reported confidence (0--100, how likely an expert TA would give the same total within 10\%) and a list of concerns. The server clamps points to each criterion's maximum and flags for review any result whose confidence is below a threshold (70 by default), that lists a concern (for example an unreadable page, a truncated submission or a missing criterion), or that comes in while auto-approval is off. TAs see the submission beside the rubric, the levels, the notes and the confidence, and approve or change the grade; a changed grade is logged with the model's score, the TA's score and who changed it, and the settings page tracks how often TAs keep the model's score.
+% Source: app/gradeai/server/queue.ts (flag rule), src/lib/grading.ts (schema), src/lib/defaults.ts (threshold 70), src/components/ReviewModal.tsx (override log).
+\todo{}{Add a screenshot of the review screen (\file{figures/dashboard.png}).}
 
-\subsection{Flagging Rule and Routing Policy}
-A submission $x$ is flagged for mandatory TA review if any criterion is uncertain or the output is invalid:
-\todo{}{EXAMPLE:}
-\begin{equation}\label{eq:flag}
-  g(x)=1 \iff \exists\, i:\; C_i<0.8 \;\;\lor\;\; \text{malformed JSON after one retry}.
-\end{equation}
-Unflagged submissions receive the consensus grade (still subject to TA spot-check at the instructor's discretion); flagged submissions are routed to the dashboard.
-
-
-
-\subsection{TA Dashboard and Interaction Model}
-The dashboard (\texttt{app/}) shows the student proof beside the rubric, model-assigned levels,
-justifications, and confidence for each criterion. TAs confirm or override; all overrides are logged.
-\todo{}{Add a screenshot (\texttt{figures/dashboard.png}) and describe override-logging schema.}
+Self-reported confidence from a fine-tuned model is a weak signal, which is why we planned the agreement-based rule below.
 
 % \begin{figure}[t]\centering
 %   \includegraphics[width=0.9\linewidth]{figures/dashboard.png}
-%   \caption{TA review dashboard.}\label{fig:dashboard}
+%   \caption{TA review screen in \gradeai{}.}\label{fig:dashboard}
 % \end{figure}
+
+\subsection{Planned: Self-Consistency Flagging}\label{sec:sc}
+The planned rule grades each submission $x$ in $k=5$ independent runs. Let $\ell_i^{(j)}(x)\in\levels=\{\lvl{full},\lvl{partial},\lvl{minimal},\lvl{none}\}$ be the level given to criterion $i$ in run $j$, with $\ell_i^{(j)}=\bot$ if the run's output is invalid. The agreement on criterion $i$ is the share of runs that give the majority level,
+\begin{equation}\label{eq:agree}
+  C_i(x)=\max_{l\in\levels}\frac{1}{k}\sum_{j=1}^{k}\indic\!\left[\ell_i^{(j)}(x)=l\right],
+\end{equation}
+the consensus level is the $l$ that attains the maximum, and the submission is flagged if any criterion falls below a threshold $\tau$ or any run is invalid:
+\begin{equation}\label{eq:flag}
+  g(x)=1 \iff \exists\, i:\; C_i(x)<\tau \;\;\lor\;\; \exists\, j:\ \text{run } j \text{ is invalid}.
+\end{equation}
+With $k=5$, $\tau=0.8$ flags any criterion on which two or more runs disagree with the majority. Unflagged submissions receive the consensus grade, still subject to spot checks; flagged ones go to the review screen. Our targets are that at most 20\% of submissions are flagged and that flagged grades are wrong at least twice as often as unflagged ones.
+This rule is not yet implemented: the evaluation decodes at temperature 0, so repeated runs are identical, and the team has not yet decided how the five runs should differ (sampling temperature, or paraphrased prompts).
+\todo{}{Decide how the five runs differ, implement it in \file{eval/metrics.py} and the worker, and fill \cref{tab:rq_triage}; otherwise move this subsection to future work.}
 
 %==============================================================================
 \section{Experimental Setup and Benchmarking}\label{sec:setup}
 
 \subsection{Research Questions}
-\todo{}{Refine research questions}
 \begin{description}[leftmargin=!,labelwidth=1.2cm,itemsep=3pt]
-  \item[RQ1] \emph{Criterion-level accuracy.} Does InstructLab fine-tuning outperform the zero-shot base model in per-criterion agreement with expert TA grades? (Target: $\ge 80\%$ agreement.)
-  \item[RQ2] \emph{Semantic invariance.} Does \gradeai{} give consistent grades when proofs are reworded without changing mathematical validity? (Target: $\ge 90\%$ consistency.)
-  \item[RQ3] \emph{Calibration and triage.} Does \todo{}{question}
-  \item[RQ4] \emph{Ablation.} What are the relative contributions of knowledge injection (Phase 1) and compositional-skill fine-tuning (Phase 2)?
-  \item[RQ5] \emph{Data Generation Method.} Is the InstructLab data generation method significantly better than generating directly from Claude Opus 5.5? 
+  \item[RQ1] \emph{Label fidelity.} How often is the label of a grade-first answer the grade an expert would give it?
+  \item[RQ2] \emph{Criterion-level accuracy.} Does fine-tuning on the generated data increase per-criterion agreement with the reference labels over the base model? (Target: $\ge 80\%$.)
+  \item[RQ3] \emph{Invariance and robustness.} Does the model keep its grade when an answer is paraphrased or has typos and grammar mistakes, lower it when a step is removed or an error added, and ignore embedded instructions? (Target: $\ge 90\%$ paraphrase consistency.)
+  \item[RQ4] \emph{Ablation.} What do the knowledge stage and the grading stage each contribute, and how does grade-first data compare with fixed-rubric data?
+  \item[RQ5] \emph{Generation method.} Does the InstructLab pipeline produce better training data than generating it directly with a frontier model such as Claude Opus 5.5?
+  \item[RQ6] \emph{Triage.} Does the flagging rule of \cref{eq:flag} concentrate errors in the flagged submissions?
 \end{description}
+RQ1 is answered in \cref{sec:res_data}. RQ2--RQ6 need the model evaluation, which is still pending.
 
-\subsection{Synthetic Test Set Construction}\label{sec:testset}
-\todo{}{Confirm with SUngmin}
-The benchmark of X synthetic student submissions is built \emph{before} training, kept in \todo{}{X}, and never exposed to SDG or training.
-Submissions were generated with Claude 3.5 Sonnet / Opus\todo{}{Confirm exact models used and disclose in AI-use statement.} and seeded with common errors: e.g. omitted or incorrect base cases; misstated inductive hypotheses; circular reasoning; incomplete algebra in the inductive step; and flawless proofs.
+\subsection{Test Sets}\label{sec:testset}
+Both test sets are kept out of generation and training, pinned by SHA-256 hash, and given to the model only through the evaluation suite, which refuses to run on a file with the wrong hash.
+% Source: eval/README.md, test_set/*.json.
 
-\subsection{Semantic Paraphrase Robustness Suite}
+\paragraph{Group B (new questions).}
+Sixty cases on 20 new questions with new rubrics, none of which appears in the taxonomy: 32 original answers and 28 variants of them, namely 12 paraphrases, 6 fairness variants (typos and grammar mistakes that do not change the mathematics), 5 sensitivity variants (a step removed or an error added) and 5 robustness variants (prompt injection or keyword stuffing). Each variant records its expected relation to its parent answer. The cases cover all eight topics. Four dataset-wide grading policies (credit for valid progress only, criterion-level independence, full credit for valid alternative proofs unless the question restricts the method, and no effect of embedded instructions) are given to the model with each case. The labels were drafted with AI assistance and reviewed by a team member; they have not been verified independently by a TA.
+\todo{}{Name the model(s) used to draft Group B and disclose them in \cref{sec:ai_use}.}
 
+\paragraph{Group A (training questions, new answers).}
+Forty cases whose questions and rubrics are the training seeds and whose answers are new. They were selected on 16 November 2026 from a separate grade-first run (454 candidate answers for the 48 seed questions), after excluding 12 answers that duplicate training answers, 24 unconfirmed answers, 18 flagged near-duplicates and 5 answers that form minimal pairs with training answers, which left a pool of 419. The 40 cases are five per topic, each from a different question, and cover all four levels, both maximum totals (31 out of 10 and 9 out of 13), 8 whole-answer scenarios and 8 answers with embedded instructions. No case is an exact or normalised duplicate of any of the 1,948 training answers or reaches the near-duplicate threshold (a token-level similarity of 0.85 with the nearest training answer to the same question). Each case is given to the model with its own question's general rules. Group A measures how well the model grades new answers to familiar questions; Group B measures transfer to new questions and rubrics.
+% Source: test_set/groupA_40_final.json (selection, training_overlap_check, source).
 
 \subsection{Baselines and Ablation Variants}
-(B1) zero-shot base [MODEL]; (B2) few-shot prompted [MODEL]; (V1) knowledge-only LoRA adapter;
-(V2) skill-only LoRA adapter; (V3) full \gradeai{} (knowledge + skill).
-\todo{}{Confirm which variants were actually trained; drop V2 if not.}
+(B1) the base Qwen3.8-27B, zero-shot, with exactly the evaluation prompt the adapter gets; (V1) the knowledge-only adapter (stage~1); (V2) the full adapter (stage~1 then stage~2 on grade-first data). For RQ4 and RQ5 we plan (V3) an adapter trained on fixed-rubric data and (V4) an adapter trained on data generated directly with a frontier model.
+\todo{}{Confirm which variants were trained; drop V3/V4 (and RQ5) if they were not.}
 
-\subsection{Evaluation Metrics}
+\subsection{Evaluation Protocol and Metrics}
+The evaluation suite (\file{eval/}) sends each case's question, rubric, rules and answer to the base model and to the fine-tuned model with the same prompt (template \texttt{eval-prompt-v3}, \cref{app:prompt}) and the same decoding (temperature 0, at most 2,048 tokens, one attempt per case; a failed request is recorded, never retried). The comparison script refuses to compare two runs unless their dataset, template, decoding settings and saved prompts are byte-identical, and a leak guard checks that no held-out field (labels, IDs, provenance) appears in any prompt. The prompt includes an output-format block generated from the rubric, which the training prompts do not have, because in a smoke test the base model wrote sensible grades in a format of its own that could not be parsed, and with the grade line first its grade differed from the sum of its criterion points in 3 of 12 development cases.
+% Source: eval/PROMPT.md (jobs 1827184 and 1998799).
 
+We report:
+(i) \emph{strict exact agreement}, the share of criteria whose predicted level equals the label, with failed predictions counted as wrong, together with agreement on valid predictions only and agreement within one level;
+(ii) the mean absolute error in points per criterion and per total, and the mean signed error, which shows whether the model grades harshly or leniently;
+(iii) quadratic weighted kappa (QWK)~\cite{cohen1968weighted} on levels;
+(iv) paraphrase consistency, fairness (identical grade under typos and grammar changes), sensitivity (a lower grade on the affected criterion and the total) and robustness (no grade above the parent's under injection);
+(v) format compliance;
+and breakdowns by topic, test type and reference level. Headline metrics come with 95\% bootstrap intervals over questions, and the comparison adds paired intervals for the difference between the models.
 
 %==============================================================================
 \section{Results and Discussion}\label{sec:results}
 \begin{center}\fbox{\parbox{0.92\linewidth}{\small
-\textbf{Status note (delete before submission).} Every number in this section is a
-\textcolor{blue!70!black}{placeholder or project target}, not a measured result.
+\textbf{Status note (delete before submission).} The numbers in \cref{sec:res_data} are measured and come from the repository. Every number in blue in \cref{sec:res_rq2,sec:res_rq3,sec:res_rq4,sec:res_triage} is a placeholder: no model-evaluation run is in \file{results/} yet.
 }}\end{center}
 
-\subsection{Per-Criterion Grading Accuracy (RQ1)}
+\subsection{Label Fidelity of Grade-First Data (RQ1)}\label{sec:res_data}
+To measure how often a grade-first label is right, we use the 40 Group A cases, whose generated labels were audited criterion by criterion before the cases became test data. For every criterion, an AI-assisted reviewer (Claude, Anthropic) worked out the level independently from the question, rubric, rules and answer and compared it with the generated label. Facts that can be computed were recomputed: the smallest constants in the asymptotic questions, the closed forms of the recurrences for $n$ up to $2^{20}$, the student DFAs and expressions on every string up to length 10, and the algebra in the induction and loop-invariant proofs. A team member decided the four cases the review flagged.
+
 \begin{table}[t]
 \centering
-\caption{Per-criterion accuracy (\%) against human consensus by induction topic.}
-\label{tab:rq1}
-\begin{tabular}{lcccc}
+\caption{Generated labels against audited labels on the 40 Group A answers (129 criteria).}
+\label{tab:fidelity}
+\small
+\begin{tabular}{lr}
 \toprule
-Model & Sums & Inequalities & Divisibility & Overall ($\kappa$)\\
+Measure & Value\\
 \midrule
-Base zero-shot & \ph{63.0} & \ph{59.5} & \ph{61.7} & \ph{61.4} (\ph{0.42})\\
-Base few-shot  & \ph{68.2} & \ph{64.0} & \ph{66.1} & \ph{66.1} (\ph{0.50})\\
-\textbf{\gradeai{}} & \ph{\textbf{85.0}} & \ph{\textbf{82.1}} & \ph{\textbf{84.0}} & \ph{\textbf{83.7}} (\ph{0.76})\\
+Criterion levels unchanged by the audit & 126 / 129 (97.7\%)\\
+QWK, generated vs.\ audited levels & 0.986\\
+Answers whose total changed & 2 / 40\\
+Criteria whose reason was corrected but level kept & 6 / 129 (4.7\%)\\
+\midrule
+Audited levels: \lvl{full} / \lvl{partial} / \lvl{minimal} / \lvl{none} & 59 / 14 / 18 / 38\\
+Mean score (share of the maximum) & 56.5\%\\
+Answers at 0\% / at 100\% of the maximum & 4 / 8\\
 \bottomrule
 \end{tabular}
-% TODO [Name 5 - Evaluation Lead]: Replace with final cluster run metrics from results/stage1_eval.json
-% (overall 61.4 / 83.7 / kappa 0.76 are project targets; per-topic and few-shot/kappa cells are invented fillers.)
+% Source: test_set/groupA_40_final_report.md (git: removed in commit "Remove Group A final report", 2026-11-18), sections 4.3 and 5.
 \end{table}
-\todo{}{Discuss: where does \gradeai{} gain most? Per-level confusion matrix? Macro-F1?}
 
-\subsection{Robustness to Semantic Rewording (RQ2)}
+\Cref{tab:fidelity} shows the result. The audit changed 3 of 129 levels (97.7\% unchanged, QWK 0.986) and the totals of 2 answers. The errors appeared where the pipeline relies on the teacher's judgement rather than on code. Two were in one regular-expression answer, where the teacher judged the soundness and completeness of an expression as \lvl{partial} and \lvl{minimal}; enumeration showed that the expression matches 30 strings up to length 10, none of them in the language, and misses all 585 strings that are, so both criteria are \lvl{none}. This is exactly the \lvl{partial}-versus-\lvl{minimal}-versus-\lvl{none} decision that code leaves to the blind teacher check. The third was an interpretive call on whether a structural-induction hypothesis names its subtrees as arbitrary, which the reviewer raised from \lvl{minimal} to \lvl{partial}. The reasons were less reliable than the levels: six more criteria kept their level but needed a corrected reason, most notably two asymptotic answers whose reason called a true inequality false when the real defect was a dropped constant. Since the teacher writes the reasons only after being told the levels, these errors never changed a grade, but a model trained on them may learn wrong explanations.
+
+The grade-first targets also produce the spread of grades that teacher-written answers lacked: 29\% of the audited criteria are at \lvl{none} and 25\% at \lvl{partial} or \lvl{minimal}, and the mean answer earns 56.5\% of the marks.
+
+Three cautions apply. First, the audit was AI-assisted, and human decisions covered only the 4 flagged cases; no case was verified end to end by a person. Second, the 40 cases exclude the 24 of 454 candidates (5.3\%) whose rewrite was never confirmed by the level check, so they estimate the fidelity of confirmed answers, which make up most but not all of the training data. Third, 40 answers is a small sample: three errors in 129 criteria are consistent with an error rate of a few percent, not a precise one.
+\todo{}{If time allows, have a TA grade a random sample of training answers blind and report the agreement here; it would remove the first two cautions.}
+
+\subsection{Per-Criterion Grading Accuracy (RQ2)}\label{sec:res_rq2}
 \begin{table}[t]
 \centering
-\caption{Grade consistency (\%) across the five linguistic styles. Each cell is the share of problems whose grade matches the reference style.}
+\caption{Strict exact criterion agreement (\%) with the reference labels, by test set, with QWK in parentheses.}
 \label{tab:rq2}
-\begin{tabular}{lcc}
+\small
+\begin{tabular}{lccc}
 \toprule
-Style & Base zero-shot & \gradeai{}\\
+Model & Group A (40) & Group B (32 originals) & Format compliance (\%)\\
 \midrule
-Concise formal & \ph{XX} & \ph{XX}\\
-Verbose explanatory & \ph{XX} & \ph{XX}\\
-Informal conversational & \ph{XX} & \ph{XX}\\
-Algebra-heavy & \ph{XX} & \ph{XX}\\
-LaTeX math-mode heavy & \ph{XX} & \ph{XX}\\
-\midrule
-All five agree & \ph{72.0} & \ph{\textbf{91.5}}\\
+Base Qwen3.8-27B, zero-shot & \ph{--} (\ph{--}) & \ph{--} (\ph{--}) & \ph{--}\\
+Knowledge adapter (V1) & \ph{--} (\ph{--}) & \ph{--} (\ph{--}) & \ph{--}\\
+\textbf{\gradeai{}} (V2) & \ph{--} (\ph{--}) & \ph{--} (\ph{--}) & \ph{--}\\
 \bottomrule
 \end{tabular}
-% TODO [Name 5]: Fill from results/perturbation_eval.json. Targets: base flips ~28%; GradeAI >= 90% consistent.
+% TODO [Evaluation lead]: Fill from compare.json (headline) of the final runs, with the bootstrap
+% intervals; add the per-topic breakdown (breakdowns.topic) as a second table or a figure.
+\end{table}
+\todo{}{Discuss where the adapter gains most (by topic and by reference level), the mean signed error (harsh vs.\ lenient), and the gap between Group A and Group B.}
+
+\subsection{Invariance and Robustness (RQ3)}\label{sec:res_rq3}
+\begin{table}[t]
+\centering
+\caption{Relation tests on the Group B variants: share of pairs or groups that pass.}
+\label{tab:rq3}
+\small
+\begin{tabular}{lccc}
+\toprule
+Test (pairs) & Expected relation & Base & \gradeai{}\\
+\midrule
+Paraphrase (12) & same levels & \ph{--} & \ph{--}\\
+Fairness (6) & same levels & \ph{--} & \ph{--}\\
+Sensitivity (5) & affected criterion and total drop & \ph{--} & \ph{--}\\
+Robustness (5) & grade not raised above parent & \ph{--} & \ph{--}\\
+\bottomrule
+\end{tabular}
+% TODO [Evaluation lead]: Fill from metrics.json (relations.*) of both runs.
 \end{table}
 
-\subsection{Selective Classification and Triage Efficacy (RQ3)}
+\subsection{Ablation (RQ4, RQ5)}\label{sec:res_rq4}
+\begin{table}[t]
+\centering
+\caption{Ablation over adapters and training data.}
+\label{tab:rq4}
+\small
+\begin{tabular}{lccc}
+\toprule
+Configuration & Agreement (\%) & QWK & Paraphrase consistency (\%)\\
+\midrule
+Base (zero-shot) & \ph{--} & \ph{--} & \ph{--}\\
++ knowledge adapter (V1) & \ph{--} & \ph{--} & \ph{--}\\
++ grading stage, fixed-rubric data (V3) & \ph{--} & \ph{--} & \ph{--}\\
++ grading stage, grade-first data (V2) & \ph{--} & \ph{--} & \ph{--}\\
+Frontier-model data (V4) & \ph{--} & \ph{--} & \ph{--}\\
+\bottomrule
+\end{tabular}
+% TODO [Training lead]: Fill from the comparison runs; delete rows that were not trained.
+\end{table}
+
+\subsection{Triage Efficacy (RQ6)}\label{sec:res_triage}
 \begin{table}[t]
 \centering
 \caption{Coverage and error concentration under the flagging rule (\cref{eq:flag}).}
-\label{tab:rq3}
+\label{tab:rq_triage}
+\small
 \begin{tabular}{lccc}
 \toprule
-Group & \% of submissions & Accuracy (\%) & Share of all errors (\%)\\
+Group & Submissions (\%) & Accuracy (\%) & Share of all errors (\%)\\
 \midrule
-Unflagged (auto-accepted) & \ph{82} & \ph{94.8} & \ph{33.1}\\
-Flagged (TA review) & \ph{18} & \ph{52.1} & \ph{66.9}\\
+Unflagged (accepted) & \ph{--} & \ph{--} & \ph{--}\\
+Flagged (TA review) & \ph{--} & \ph{--} & \ph{--}\\
 \bottomrule
 \end{tabular}
-% TODO [Name 5]: Fill from results/triage_eval.json.
-% NOTE: The placeholder numbers (82/94.8 and 18/52.1) imply flagged cases hold ~66.9% of errors,
-% NOT >=72%. Either the real run will differ, or the ">=72% of errors" target needs revisiting.
-\end{table}
-\todo{}{Add a coverage--risk curve (sweep the threshold on $C_i$) as a figure; state the final EC value.}
-
-% \begin{figure}[t]\centering
-%   \includegraphics[width=0.7\linewidth]{figures/coverage_risk.pdf}
-%   \caption{Selective risk vs.\ coverage.}\label{fig:covrisk}
-% \end{figure}
-
-\subsection{Ablation: Knowledge vs.\ Skill Fine-Tuning (RQ4)}
-\begin{table}[t]
-\centering
-\caption{Ablation over adapter configurations.}
-\label{tab:rq4}
-\begin{tabular}{lccc}
-\toprule
-Configuration & Accuracy (\%) & $\kappa$ & Rewording consistency (\%)\\
-\midrule
-Base (zero-shot) & \ph{XX.X} & \ph{0.XX} & \ph{XX.X}\\
-+ Knowledge adapter & \ph{XX.X} & \ph{0.XX} & \ph{XX.X}\\
-+ Skill adapter & \ph{XX.X} & \ph{0.XX} & \ph{XX.X}\\
-+ Combined (\gradeai{}) & \ph{XX.X} & \ph{0.XX} & \ph{XX.X}\\
-\bottomrule
-\end{tabular}
-% TODO [Name 4 - Training Lead]: Fill from jobs/compare_adapter.sh outputs.
+% TODO [Evaluation lead]: Fill once self-consistency flagging exists (sec:sc). Add a coverage--risk
+% curve that sweeps tau.
 \end{table}
 
-\subsection{Qualitative Error Analysis and Failure Modes}
-\todo{}{Pull 3--5 concrete failures from results logs (App.~\ref{app:examples}).}
-% CLAUDE Suggested categories: algebraic errors hidden by fluent prose; subtle base-case edge cases; over-penalising unconventional but valid reasoning; justification text that contradicts the level
+\subsection{Qualitative Error Analysis}
+\todo{}{Pull 3--5 concrete model failures from the evaluation runs (\cref{app:examples}). Suggested categories: algebra errors hidden by fluent prose; base-case edge cases; over-penalising unconventional but valid reasoning; reasons that contradict the level; following embedded instructions.}
 
 %==============================================================================
 \section{Ethical Analysis and Responsible AI Design}\label{sec:ethics}
-% TODO [Name 1 + Name 2]: This section is course-critical (CSC398). Aim for ~1 page; tie to course readings.
+% TODO [Ethics lead]: Tie each subsection to the course readings and the ethics document.
 
 \subsection{Student Privacy, Data Sovereignty, and FIPPA}
-GradeAI is designed to run on the Fir research cluster so that grading does not require sending student submissions to a commercial LLM API. This limits external disclosure, but submissions and grading records still require access controls and retention rules. The prototype uses synthetic proofs. Any deployment involving real student work would require institutional review of how submissions are accessed, stored, and retained.
+\gradeai{} is designed to run on the Fir research cluster so that grading does not require sending student submissions to a commercial LLM API. This limits external disclosure, but submissions and grading records still require access controls and retention rules. The prototype uses synthetic proofs. Any deployment involving real student work would require institutional review of how submissions are accessed, stored, and retained.
+
+The data pipeline supports this design. No student work is used for training: every training question, rubric and answer was written by the team or generated from those seeds, and the test sets are synthetic as well. The teacher also ran on Fir, so generation used no commercial AI service.
+
+\subsection{Provenance and Licensing of the Training Data}
+The knowledge entries are grounded in the CSC236 course notes, and the taxonomy rule is that an entry whose source has no recorded permission is not committed. The \file{attribution.txt} files currently credit the authors but do not all record a licence or the date of permission, and the induction entry still has the template text. Synthetic data inherits the biases of its teacher, so we keep the human-written seeds and rubrics as the reference for what the data should contain, and keep review files that show, for each generated answer, the reference it was built on, the changes made and the label.
 
 \subsection{Linguistic and Non-Native-Speaker Bias}
-A grading model may penalize unfamiliar phrasing, minor grammatical errors, or typos even when the mathematical reasoning is correct. To test for this, we propose comparing rubric-level grades across matched versions of a proof that preserve its mathematical content. We also compare those grades with the reference labels, since a model can assign the same incorrect grade to every version. Synthetic style variants test sensitivity to wording. Their results have limited applicability to real student populations.
+A grading model may penalize unfamiliar phrasing, minor grammatical errors, or typos even when the mathematical reasoning is correct. To test for this, we compare rubric-level grades across matched versions of a proof that preserve its mathematical content (the Group B fairness variants). We also compare those grades with the reference labels, since a model can assign the same incorrect grade to every version. To reduce the risk during training, one of the eight reference styles is a correct answer written by a student whose first language is not English, and it is labelled \lvl{full}. Synthetic style variants test sensitivity to wording. Their results have limited applicability to real student populations.
 
 \subsection{Over-Reliance and TA Agency}
-If the model gives the same incorrect grade across several runs, the submission may go unflagged. We propose having TAs review flagged submissions and randomly sample unflagged ones to identify errors the rule misses. To check for automation bias, TAs would grade a small subset before seeing the model’s output and then compare the two assessments. TAs retain authority to override the model’s grades.
+If the model gives the same incorrect grade across several runs, the submission may go unflagged. We propose having TAs review flagged submissions and randomly sample unflagged ones to identify errors the rule misses. To check for automation bias~\cite{parasuraman2010complacency}, TAs would grade a small subset before seeing the model's output and then compare the two assessments. TAs retain authority to override the model's grades. In the current prototype, auto-approval of results above the confidence threshold is on by default; for any real use it should be off, so that a TA signs off on every grade.
 
 \subsection{Transparency, Explainability, and Contestability}
-Criterion-level grades and short explanations can help students identify where they lost credit and give TAs a specific decision to review. The model may have misunderstood the student's reasoning. Therefore, when a student disputes a grade, the TA should assess the original proof against the rubric. Under the proposed workflow, students would be told when GradeAI assisted with grading and could request a TA regrade of the disputed criterion.
+Criterion-level grades and short explanations can help students identify where they lost credit and give TAs a specific decision to review. The model may have misunderstood the student's reasoning. Therefore, when a student disputes a grade, the TA should assess the original proof against the rubric. Under the proposed workflow, students would be told when \gradeai{} assisted with grading and could request a TA regrade of the disputed criterion. Our label audit (\cref{sec:res_data}) is a reminder that an explanation can be fluent and wrong while the grade is right, so explanations should not be treated as evidence for a grade.
 
-\subsection{Statement on AI Use}
-\todo{}{Disclose how AI tools were used in research and writing (including synthetic test-set generation and any drafting help) per CSC398 academic-integrity requirements.}
+\subsection{Statement on AI Use}\label{sec:ai_use}
+We disclose the following uses of AI tools. (i) Qwen3.8-27B (and, in early runs, Mistral-7B-Instruct-v0.2) was the teacher model that generated the synthetic training data and the Group A answers. (ii) The Group B labels were drafted with AI assistance and reviewed by a team member. (iii) The Group A labels were audited with Claude (Anthropic), with human decisions on the flagged cases. (iv) Parts of this paper were drafted with the help of Claude from the project repository, and the authors reviewed and edited the text.
+\todo{}{Complete this statement for every team member's use of AI tools in code and writing, per the CSC398 academic-integrity requirements, and confirm which teacher produced the final training data.}
 
 %==============================================================================
 \section{Limitations and Threats to Validity}\label{sec:limits}
 \begin{itemize}[leftmargin=*,itemsep=2pt]
-  \item See ethics document
+  \item \textbf{Synthetic answers are not student answers.} Grade-first answers make mistakes in parts that nothing else depends on, at most three at a time. Real students' errors often cascade (a wrong hypothesis that the step then uses), and the training data deliberately avoids such answers because their grade is undefined without a decision on how errors propagate. The model may grade them less well.
+  \item \textbf{Teacher and base model are the same model.} Qwen3.8-27B wrote the references, rewrites and reasons and is also the base model, so the data shares the base model's style and blind spots, and the teacher's mistakes are the kind the base model already makes.
+  \item \textbf{Labels are not TA-verified.} Group A labels were audited with AI assistance; Group B labels were AI-drafted and reviewed by a team member. No set has been independently verified by a TA or frozen.
+  \item \textbf{Code checks are finite.} Expressions and DFAs are tested on strings up to length 10, and closed forms at a few values of $n$; every claim checked has a standard proof, but the checks are not proofs.
+  \item \textbf{Rubric edge cases.} The audit found one inversion in the recurrence rubrics: one substitution with a correct general form scores below two substitutions with none. It should be fixed in the training seeds.
+  \item \textbf{Generation artefacts.} Some answers keep traces of the construction, such as a part starting with ``Next,'' after an omitted part, which may hint at the missing part.
+  \item \textbf{Prompt mismatches.} The evaluation prompt adds an output-format block that the training prompts lack, and the Group B text uses Unicode symbols where training uses ASCII. The \gradeai{} prototype uses a different prompt and asks for JSON, which the adapter was not trained to produce; the app's prompt must be aligned with the training format before the adapter is deployed.
+  \item \textbf{Scope.} One course, eight topics and 48 training questions; typed answers only (OCR errors in scanned work are not studied); and no study yet of TA time saved.
 \end{itemize}
-\todo{}{Revise once results are final; add real limitations discovered during experiments. Consult ethics document for more.}
+\todo{}{Revise once results are final; add limitations found during the evaluation. Consult the ethics document.}
 
 %==============================================================================
 \section{Conclusion and Future Work}\label{sec:conclusion}
-% TODO [Name 1]: Rewrite after results are in.
-We presented a method to use InstructLab-based synthetic data, LoRA fine-tuning, deterministic scoring, and self-consistency-based triage. \todo{}{unslop} Using this method, we built \gradeai{}, a privacy-preserving, human-in-the-loop system for grading undergraduate proofs that combines  \todo{Name 1}{Summarise the actual headline results here (accuracy, invariance, error concentration).}
-Future work includes \todo{}{future work}
+% TODO [Writing lead]: Add the headline model results once they exist.
+InstructLab makes it possible to fine-tune a local grader without any real student work, but for rubric grading its default pipeline produced data with invented rubrics, few flawed answers and labels no better than the teacher's judgement. We replaced it step by step: 48 original questions with machine-checked, single-source rubrics; a pipeline that keeps each rubric fixed; and grade-first generation, in which code decides every grade, the teacher only writes correct references, minimal rewrites and reasons, and code builds and grades automata and regular expressions. On an audited sample, the generated levels agreed with the audited ones on 97.7\% of criteria, and the remaining errors were concentrated where code leaves the decision to the teacher. The general lesson is that when the label of a synthetic example can be decided before the example is written, it should be: the teacher model is far more reliable at writing text to a specification than at judging it.
+\ph{Fine-tuning Qwen3.8-27B on this data raises criterion agreement from X\% to Y\% on held-out answers.}
+
+Future work includes self-consistency flagging (\cref{sec:sc}); answers with cascading errors, which need an explicit rule for how errors propagate; extending code checking to more topics, for example checking induction algebra symbolically; aligning the \gradeai{} prompt with the training format and measuring TA time and agreement on real, consented submissions under institutional review; and extending the taxonomy to MAT102.
 
 \section*{Acknowledgments}
-We thank \todo{}{Instructor Rutwa Engineer, [mentors], [Digital Research Alliance of Canada (allocation \texttt{def-engine14})], anyone else.}
+We thank our instructor Rutwa Engineer, our mentors at Red Hat and IBM \todo{}{names}, David Liu and Daniel Zingaro for the CSC236 course notes, and the Digital Research Alliance of Canada for compute on Fir (allocation \file{def-engine14}).
 
 %==============================================================================
 \begin{thebibliography}{99}\small
-% TODO [Name 2]: Verify every entry (authors, venue, year, URL) before submission.
-% Entries marked "ADD" still need to be filled in from the literature search.
+% Every entry was checked on 2026-11-23. TODO [Literature lead]: add the Qwen3.8 model card URL.
 
+\bibitem[Angelopoulos and Bates(2021)]{angelopoulos2021gentle}
+Anastasios N. Angelopoulos and Stephen Bates.
+\newblock A gentle introduction to conformal prediction and distribution-free uncertainty quantification.
+\newblock arXiv:2107.07511, 2021.
 
-\bibitem{sudalairaj2024lab}
-Shivchander Sudalairaj et al.
-\newblock LAB: Large-scale alignment for chatbots.
+\bibitem[Burrows et~al.(2015)]{burrows2015eras}
+Steven Burrows, Iryna Gurevych, and Benno Stein.
+\newblock The eras and trends of automatic short answer grading.
+\newblock \emph{International Journal of Artificial Intelligence in Education}, 25(1):60--117, 2015.
+
+\bibitem[Chow(1970)]{chow1970optimum}
+C.~K. Chow.
+\newblock On optimum recognition error and reject tradeoff.
+\newblock \emph{IEEE Transactions on Information Theory}, 16(1):41--46, 1970.
+
+\bibitem[Cohen(1968)]{cohen1968weighted}
+Jacob Cohen.
+\newblock Weighted kappa: Nominal scale agreement with provision for scaled disagreement or partial credit.
+\newblock \emph{Psychological Bulletin}, 70(4):213--220, 1968.
+
+\bibitem[de~Moura and Ullrich(2021)]{demoura2021lean}
+Leonardo de~Moura and Sebastian Ullrich.
+\newblock The {Lean} 4 theorem prover and programming language.
+\newblock In \emph{Automated Deduction -- CADE 28}, LNCS 12699, pages 625--635. Springer, 2021.
+
+\bibitem[Dettmers et~al.(2023)]{dettmers2023qlora}
+Tim Dettmers, Artidoro Pagnoni, Ari Holtzman, and Luke Zettlemoyer.
+\newblock {QLoRA}: Efficient finetuning of quantized {LLMs}.
+\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS)}, 2023.
+
+\bibitem[FIPPA(1990)]{fippa}
+\emph{Freedom of Information and Protection of Privacy Act}, R.S.O. 1990, c.~F.31 (Ontario).
+
+\bibitem[Geifman and El-Yaniv(2017)]{geifman2017selective}
+Yonatan Geifman and Ran El-Yaniv.
+\newblock Selective classification for deep neural networks.
+\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS)}, 2017.
+
+\bibitem[Gonzalez et~al.(2026)]{gonzalez2026qedbench}
+Santiago Gonzalez, Alireza Amiri Bavandpour, Peter Ye, Edward Zhang, Ruslans Aleksejevs, et~al.
+\newblock {QEDBench}: Quantifying the alignment gap in automated evaluation of university-level mathematical proofs.
+\newblock arXiv:2602.20629, 2026.
+
+\bibitem[Greshake et~al.(2023)]{greshake2023injection}
+Kai Greshake, Sahar Abdelnabi, Shailesh Mishra, Christoph Endres, Thorsten Holz, and Mario Fritz.
+\newblock Not what you've signed up for: Compromising real-world {LLM}-integrated applications with indirect prompt injection.
+\newblock In \emph{Proceedings of the 16th ACM Workshop on Artificial Intelligence and Security (AISec)}, 2023.
+
+\bibitem[Hu et~al.(2022)]{hu2022lora}
+Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu~Wang, and Weizhu Chen.
+\newblock {LoRA}: Low-rank adaptation of large language models.
+\newblock In \emph{International Conference on Learning Representations (ICLR)}, 2022.
+
+\bibitem[InstructLab(2024)]{instructlab}
+InstructLab project.
+\newblock {InstructLab}: Taxonomy, synthetic data generation and training tools.
+\newblock \url{https://github.com/instructlab}; documentation at \url{https://docs.instructlab.ai}.
+
+\bibitem[Jiang et~al.(2023)]{jiang2023mistral}
+Albert Q. Jiang, Alexandre Sablayrolles, Arthur Mensch, et~al.
+\newblock Mistral {7B}.
+\newblock arXiv:2310.06825, 2023.
+
+\bibitem[Kaushik et~al.(2020)]{kaushik2020learning}
+Divyansh Kaushik, Eduard Hovy, and Zachary C. Lipton.
+\newblock Learning the difference that makes a difference with counterfactually-augmented data.
+\newblock In \emph{International Conference on Learning Representations (ICLR)}, 2020.
+
+\bibitem[Kwon et~al.(2023)]{kwon2023vllm}
+Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin Zheng, Cody~Hao Yu, Joseph~E. Gonzalez, Hao Zhang, and Ion Stoica.
+\newblock Efficient memory management for large language model serving with {PagedAttention}.
+\newblock In \emph{Proceedings of the 29th Symposium on Operating Systems Principles (SOSP)}, 2023.
+
+\bibitem[Lightman et~al.(2024)]{lightman2024verify}
+Hunter Lightman, Vineet Kosaraju, Yura Burda, Harri Edwards, Bowen Baker, Teddy Lee, Jan Leike, John Schulman, Ilya Sutskever, and Karl Cobbe.
+\newblock Let's verify step by step.
+\newblock In \emph{International Conference on Learning Representations (ICLR)}, 2024.
+
+\bibitem[Liu(2026)]{liu_notes}
+David Liu (with UTM edits by Daniel Zingaro).
+\newblock \emph{Introduction to the Theory of Computation: Lecture Notes and Exercises for CSC236}.
+\newblock University of Toronto. \todo{}{year/edition and link}
+
+\bibitem[Mahinpei et~al.(2026)]{mahinpei2026tas}
+Romina Mahinpei, Sofiia Druchyna, and Manoel Horta~Ribeiro.
+\newblock When {LLMs} help -- and hurt -- teaching assistants in proof-based courses.
+\newblock arXiv:2602.23635, 2026.
+
+\bibitem[Parasuraman and Manzey(2010)]{parasuraman2010complacency}
+Raja Parasuraman and Dietrich H. Manzey.
+\newblock Complacency and bias in human use of automation: An attentional integration.
+\newblock \emph{Human Factors}, 52(3):381--410, 2010.
+
+\bibitem[Qwen Team(2026)]{qwen38}
+Qwen Team.
+\newblock {Qwen3.8-27B} model card.
+\newblock \todo{}{add the model card URL and release date}
+
+\bibitem[Shumailov et~al.(2024)]{shumailov2024collapse}
+Ilia Shumailov, Zakhar Shumaylov, Yiren Zhao, Nicolas Papernot, Ross Anderson, and Yarin Gal.
+\newblock {AI} models collapse when trained on recursively generated data.
+\newblock \emph{Nature}, 631:755--759, 2024.
+
+\bibitem[Sudalairaj et~al.(2024)]{sudalairaj2024lab}
+Shivchander Sudalairaj, Abhishek Bhandwaldar, Aldo Pareja, Kai Xu, David D. Cox, and Akash Srivastava.
+\newblock {LAB}: Large-scale alignment for chatbots.
 \newblock arXiv:2403.01081, 2024.
 
+\bibitem[Unsloth(2024)]{unsloth}
+Daniel Han, Michael Han, and the Unsloth team.
+\newblock Unsloth.
+\newblock \url{https://github.com/unslothai/unsloth}.
+
+\bibitem[von Werra et~al.(2020)]{trl}
+Leandro von Werra, Younes Belkada, Lewis Tunstall, Edward Beeching, Tristan Thrush, Nathan Lambert, Shengyi Huang, Kashif Rasul, and Quentin Gallou{\'e}dec.
+\newblock {TRL}: Transformer reinforcement learning.
+\newblock \url{https://github.com/huggingface/trl}, 2020.
+
+\bibitem[Wang et~al.(2023a)]{wang2023selfconsistency}
+Xuezhi Wang, Jason Wei, Dale Schuurmans, Quoc Le, Ed~Chi, Sharan Narang, Aakanksha Chowdhery, and Denny Zhou.
+\newblock Self-consistency improves chain of thought reasoning in language models.
+\newblock In \emph{International Conference on Learning Representations (ICLR)}, 2023.
+
+\bibitem[Wang et~al.(2023b)]{wang2023selfinstruct}
+Yizhong Wang, Yeganeh Kordi, Swaroop Mishra, Alisa Liu, Noah A. Smith, Daniel Khashabi, and Hannaneh Hajishirzi.
+\newblock Self-{Instruct}: Aligning language models with self-generated instructions.
+\newblock In \emph{Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (ACL)}, 2023.
+
+\bibitem[Wei et~al.(2022)]{wei2022cot}
+Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed~Chi, Quoc Le, and Denny Zhou.
+\newblock Chain-of-thought prompting elicits reasoning in large language models.
+\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS)}, 2022.
+
+\bibitem[Zhao et~al.(2024)]{zhao2024induction}
+Chenyan Zhao, Mariana Silva, and Seth Poulsen.
+\newblock Autograding mathematical induction proofs with natural language processing.
+\newblock arXiv:2406.10268, 2024.
+
+\bibitem[Zhao et~al.(2025)]{zhao2025fewshot}
+Chenyan Zhao, Mariana Silva, and Seth Poulsen.
+\newblock Language models are few-shot graders.
+\newblock arXiv:2502.13337, 2025.
+
+\bibitem[Zheng et~al.(2023)]{zheng2023judging}
+Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu, Yonghao Zhuang, Zi~Lin, Zhuohan Li, Dacheng Li, Eric~P. Xing, Hao Zhang, Joseph~E. Gonzalez, and Ion Stoica.
+\newblock Judging {LLM}-as-a-judge with {MT-Bench} and {Chatbot Arena}.
+\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS), Datasets and Benchmarks Track}, 2023.
+
 \end{thebibliography}
-\todo{}{references}
+
 %==============================================================================
 \appendix
 
-\section{Prompt Template}\label{app:prompt}
+\section{Evaluation Prompt Template (\texttt{eval-prompt-v3})}\label{app:prompt}
+The system message is the one InstructLab puts in every training example. The user message is:
 \begin{lstlisting}
-QUESTION:
-{question}
+Grade the student answer against the question and rubric below. For each criterion,
+choose the level that fits the answer and give a one-sentence reason.
 
-RUBRIC:
-{rubric_json}
+Question:
+<question>
 
-<answer>
-{student_answer}
-</answer>
+Rubric (Total <N> pts):
+- C1 <criterion>: <max> pts.
+  full (<pts>): <expectation>
+  partial (<pts>): <expectation>
+  minimal (<pts>): <expectation>
+  none (0): <expectation>
+- C2 ...
+General rules:
+1. <rule>
+...
+
+Write your grade in exactly this format, with exactly these criterion lines, and nothing else:
+
+**Feedback:**
+- C1 <criterion>: <level> (<points>/<max>). <one-sentence reason>
+- C2 ...   (one line for each criterion in this rubric)
+Total: <C1 points> + <C2 points> + ... = <total points>.
+
+**Grade:** <total points> / <N>
+
+<level> is full, partial, minimal or none, and <points> is what the rubric gives that level.
+The Grade must equal the sum of all criterion points.
+
+Student Answer:
+<student answer, verbatim>
 \end{lstlisting}
-\todo{}{replace prompt}
+The training prompts are identical except that they have no output-format block (the paragraph starting ``Write your grade'' and the two lines after the format), and the training labels put the \texttt{**Grade:**} line first.
 
-\section{Sample Mathematical Induction Rubric (JSON)}\label{app:rubric}
-\todo{Name 3}{Replace this rubric with a real one from taxonomy or \texttt{test\_set/}.}
+\section{Sample Rubric}\label{app:rubric}
+The rubric source file \file{data/rubrics/psi_divisible_by_6.yaml}, from which \file{tools/rubrics.py} renders the rubric block of the seed context.
 \begin{lstlisting}
-{
-    rubric here
-}
+id: psi_divisible_by_6
+targets:
+  - "**/grading/csc236/induction_simple/qna.yaml"
+match: "6 divides n^3 + 11n"
+question: |
+  Let N = {0, 1, 2, ...}. Use simple induction on n to prove that for every n in N,
+  6 divides n^3 + 11n. [10 marks]
+criteria:
+  - id: C1
+    criterion: Predicate and base case
+    max: 3
+    levels:
+      full:    {points: 3, expectation: "States the predicate P(n): 6 divides n^3 + 11n (or
+                n^3 + 11n = 6m for some integer m) and verifies P(0): 0^3 + 11(0) = 0 = 6 * 0."}
+      partial: {points: 2, expectation: "Verifies P(0) correctly but never states the predicate
+                being proved."}
+      minimal: {points: 1, expectation: "Mentions a base case without verifying it, or checks
+                n = 1 instead of n = 0, which is in the domain."}
+      none:    {points: 0, expectation: "No base case."}
+  - id: C2
+    criterion: Induction hypothesis
+    max: 3
+    levels:
+      full:    {points: 3, expectation: "For an arbitrary k in N, assumes P(k) with a named
+                witness (k^3 + 11k = 6m for some integer m) and states the goal P(k + 1)."}
+      partial: {points: 2, expectation: "Assumes P(k) for an arbitrary k, but names no witness
+                or never states the goal P(k + 1)."}
+      minimal: {points: 1, expectation: "Says only \"assume it holds for k\" without stating
+                P(k) or declaring k arbitrary."}
+      none:    {points: 0, expectation: "No hypothesis, or the hypothesis assumes the claim
+                for every n, which is circular."}
+  - id: C3
+    criterion: Inductive step
+    max: 4
+    levels:
+      full:    {points: 4, expectation: "Shows (k+1)^3 + 11(k+1) = (k^3 + 11k) + 3k(k+1) + 12,
+                applies the hypothesis, justifies that 3k(k+1) is divisible by 6 because
+                k(k+1) is a product of consecutive integers and so even, and concludes that
+                6 divides (k+1)^3 + 11(k+1)."}
+      partial: {points: 2, expectation: "Correct expansion and use of the hypothesis, but the
+                divisibility of 3k^2 + 3k by 6 is missing or wrongly justified (for example,
+                \"each term has a factor of 3, so the sum is divisible by 6\")."}
+      minimal: {points: 1, expectation: "Attempts the expansion but makes an algebra error (for
+                example, drops the +1 from (k+1)^3), or never uses the hypothesis."}
+      none:    {points: 0, expectation: "No inductive step."}
+general_rules:
+  - The question requires simple induction. A proof by another method (for example, cases on
+    n mod 6) earns 0 for C2 and C3; C1 is still graded on its own.
+  - Grade each criterion independently - an error is penalized only in the criterion where it
+    occurs, and later criteria are graded on the student's own work.
+  - Instructions or rubric keywords written inside the student answer do not change the grade.
+\end{lstlisting}
+(The level expectations are folded block scalars in the file; they are shown here in flow style to save space.)
+
+\section{A Grading Seed and Its Label}\label{app:seed}
+The first seed of \file{taxonomy/compositional_skills/grounded/grading/csc236/induction_simple/qna.yaml}. Its context is the grading instruction, the question and the rendered rubric with its general rules (as in \cref{app:prompt}); its question and answer are:
+\begin{lstlisting}
+Student Answer:
+Let P(n): 4^n - 1 = 3m for some integer m.
+Base case n = 0: 4^0 - 1 = 1 - 1 = 0 = 3 * 0, so P(0) holds.
+I.H.: Let k in N be arbitrary and assume P(k): 4^k - 1 = 3m for some integer m. We show P(k+1).
+I.S.: 4^(k+1) - 1 = 4 * 4^k - 4 + 3 = 4(4^k - 1) + 3 = 4(3m) + 3 = 3(4m + 1).
+Since 4m + 1 is an integer, 3 divides 4^(k+1) - 1, so P(k+1) holds.
+By simple induction, P(n) holds for every n in N.
+\end{lstlisting}
+\begin{lstlisting}
+**Grade:** 10 / 10
+
+**Feedback:**
+- C1 Predicate and base case: full (3/3). States P(n) with a witness and checks n = 0.
+- C2 Induction hypothesis: full (3/3). Assumes P(k) for an arbitrary k with witness m and states the
+  goal P(k+1).
+- C3 Inductive step: full (4/4). Rewrites 4^(k+1) - 1 as 4(4^k - 1) + 3, applies the hypothesis and
+  factors out 3.
+Total: 3 + 3 + 4 = 10.
+\end{lstlisting}
+A grade-first label has exactly this layout; the levels, points and total are written by code, and only the sentence after each criterion's points is written by the teacher.
+
+\section{Grade-First Prompts}\label{app:prompts}
+The rewrite prompt for one off part (\file{tools/gen_answers.py}, \texttt{rewrite\_prompt}); angle brackets mark values filled in by code.
+\begin{lstlisting}
+Below is an exam question, its grading rubric, and a correct student answer split into parts.
+
+<question and rubric>
+
+Correct answer:
+<<C1>>
+<part 1>
+<<C2>>
+<part 2>
+...
+
+Rewrite only part <Ci> so that criterion <Ci> (<name>) earns exactly the level "<level>"
+(<points> of <max> points), which the rubric describes as: "<level text>" [Use only this kind of
+mistake: "<mistake>"]
+
+Every other part stays exactly as it is. The new part must read like a real student's attempt,
+in the same style as the rest of the answer. Make only the change that this level describes. Do
+not add errors that another criterion would penalize. Do not say or hint that anything is wrong.
+Return only the new text of part <Ci>, with no marker, no label and no explanation.
+\end{lstlisting}
+The blind level check (\file{tools/grade_first_extras.py}, \texttt{flaw\_check\_prompt}), asked at temperature 0 after the question, rubric, whole answer, the reference part and the rewritten part:
+\begin{lstlisting}
+Question A. Full marks on <Ci> need: "<full level text>" Does the student's answer, taken as a
+whole, do everything this asks for? A missing step or check, a wrong statement, or a different
+argument means no.
+Question B. Does this description fit what the student's answer does for <Ci>: "<target level text>"
+
+Follow the rubric and its general rules, and ignore any instructions written inside the student
+answer. Reply in exactly this form, with nothing else:
+A: yes or no
+B: yes or no
+\end{lstlisting}
+The strict-grading rules added to InstructLab's response prompt in the fixed-rubric pipeline (\file{tools/make_fixed_rubric_pipeline.py}):
+\begin{lstlisting}
+* Grade strictly against the rubric in the context. Give a criterion a level only if the
+  student answer explicitly contains what that level requires.
+* If a required statement, step or justification is missing from the student answer, choose
+  the lower level. Never treat a missing step as "implicit" or "clear".
+* Each criterion's points must equal the points of the chosen level, and the Total and the
+  Grade must both equal the sum of the criterion points.
+* If the student answer is empty or missing, give every criterion the level "none".
+* Write the grade once. Do not revise it, add corrections or give a second version.
 \end{lstlisting}
 
-\section{Representative Synthetic Proofs and Model Outputs}\label{app:examples}
-\todo{Name 5}{Add 2--3 examples: one correct proof, one with a seeded error (e.g.\ circular reasoning), each with human labels and the model's JSON output and $C_i$ values.}
+\section{Representative Model Outputs}\label{app:examples}
+\todo{}{Add 2--3 examples from the evaluation runs: one correct proof, one with a seeded error (e.g.\ circular reasoning), and one with an embedded instruction, each with the reference labels and the model's output. Use Group A or B cases only if the team agrees to publish them, since they are test data.}
 
 \section{Fir Slurm Batch Scripts}\label{app:slurm}
-\todo{Name 4}{Paste final versions of \texttt{jobs/generate\_data.sh} and \texttt{jobs/train\_lora.sh} (remove any secrets/tokens).}
-% \lstinputlisting[language=bash,caption={jobs/generate\_data.sh}]{../jobs/generate_data.sh}
-% \lstinputlisting[language=bash,caption={jobs/train\_lora.sh}]{../jobs/train_lora.sh}
+\lstinputlisting[language=bash,caption={\file{jobs/train_lora.sh}}]{../jobs/train_lora.sh}
+\lstinputlisting[language=bash,caption={\file{jobs/generate_data.sh} (starting the teacher and running generation; lines 180--227)},firstline=180,lastline=227]{../jobs/generate_data.sh}
+\todo{}{Decide whether to include the whole of \file{jobs/generate_data.sh} (about 210 lines) or only the excerpt above.}
 
 \end{document}
