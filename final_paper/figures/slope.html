@@ -1,0 +1,63 @@
+<!doctype html><meta charset="utf-8">
+<title>GradeAI slope figure</title>
+<!-- Source of figures/slope.pdf. To rebuild: open in Chrome and print to PDF with no margins, or run headless Chrome with --print-to-pdf. -->
+<style>
+@page { size: 6.5in 3.05in; margin: 0; }
+html, body { margin: 0; background: #fff; }
+body { width: 6.5in; height: 3.05in; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #1a1a1a; }
+.row { display: flex; width: 6.5in; }
+svg { width: 3.25in; height: 2.75in; display: block; }
+svg text { font-family: inherit; }
+.key { display: flex; justify-content: center; gap: 18px; font-size: 8.5pt; color: #333; height: 0.3in; align-items: center; }
+.key span { display: inline-flex; align-items: center; gap: 6px; }
+</style>
+<div class="key">
+  <span><svg width="22" height="6" style="width:22px;height:6px"><line x1="1" y1="3" x2="21" y2="3" stroke="#1849a9" stroke-width="2.6"/></svg>Grade-first, final (run 5)</span>
+  <span><svg width="22" height="6" style="width:22px;height:6px"><line x1="1" y1="3" x2="21" y2="3" stroke="#6f93d6" stroke-width="1.6"/></svg>Grade-first</span>
+  <span><svg width="22" height="6" style="width:22px;height:6px"><line x1="1" y1="3" x2="21" y2="3" stroke="#c4545a" stroke-width="1.6" stroke-dasharray="4 2.5"/></svg>Teacher-graded</span>
+</div>
+<div class="row"><svg id="a" viewBox="0 0 312 264"></svg><svg id="b" viewBox="0 0 312 264"></svg></div>
+<script>
+const M = [
+  { n: 'Run 5 (final)', A: 95.3, B: 91.4, k: 'best' },
+  { n: 'Run 4', A: 91.5, B: 90.7, k: 'good' },
+  { n: 'Run 6', A: 91.5, B: 88.9, k: 'good' },
+  { n: 'Run 3', A: null, B: 85.8, k: 'bad' },
+  { n: 'Run 1', A: null, B: 79.3, k: 'bad' },
+  { n: 'Run 2', A: null, B: 78.1, k: 'bad' },
+];
+const C = { best: '#1849a9', good: '#6f93d6', bad: '#c4545a' };
+const BASE = { A: 81.4, B: 88.0 };
+const NS = 'http://www.w3.org/2000/svg';
+function draw(id, key, title, sub) {
+  const s = document.getElementById(id);
+  const el = (t, a, x) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (x != null) e.textContent = x; s.appendChild(e); return e; };
+  const X0 = 58, X1 = 178, T = 36, H = 196, y = v => T + (100 - v) / 25 * H;
+  el('text', { x: 14, y: 13, 'font-size': 11, 'font-weight': 700 }, title);
+  el('text', { x: 14, y: 26, 'font-size': 8.5, fill: '#555' }, sub);
+  for (let v = 75; v <= 100; v += 5) {
+    el('line', { x1: X0 - 10, x2: X1 + 6, y1: y(v), y2: y(v), stroke: '#e4e4e4', 'stroke-width': 0.8 });
+    el('text', { x: X0 - 14, y: y(v) + 3, 'text-anchor': 'end', 'font-size': 8, fill: '#777' }, v + '%');
+  }
+  el('text', { x: X0, y: T + H + 22, 'text-anchor': 'middle', 'font-size': 8.5, 'font-weight': 600 }, 'Base model');
+  el('text', { x: X1, y: T + H + 22, 'text-anchor': 'middle', 'font-size': 8.5, 'font-weight': 600 }, 'After stage 2');
+  const rows = M.filter(m => m[key] != null).sort((a, b) => b[key] - a[key]);
+  let last = -1e9; const ly = rows.map(r => { const p = Math.max(y(r[key]), last + 11.5); last = p; return p; });
+  const order = [...rows.keys()].sort((i, j) => (rows[i].k === 'best') - (rows[j].k === 'best'));
+  order.forEach(i => {
+    const r = rows[i], c = C[r.k], best = r.k === 'best';
+    const ln = { x1: X0, y1: y(BASE[key]), x2: X1, y2: y(r[key]), stroke: c, 'stroke-width': best ? 2.6 : 1.6, 'stroke-linecap': 'round' };
+    if (r.k === 'bad') ln['stroke-dasharray'] = '4 2.5';
+    el('line', ln);
+    el('circle', { cx: X1, cy: y(r[key]), r: best ? 4 : 3, fill: c, stroke: '#fff', 'stroke-width': 1 });
+    if (Math.abs(ly[i] - y(r[key])) > 0.5) el('line', { x1: X1 + 5, y1: y(r[key]), x2: X1 + 11, y2: ly[i], stroke: '#999', 'stroke-width': 0.7 });
+    el('text', { x: X1 + 14, y: ly[i] + 3, 'font-size': 8.5, 'font-weight': 700 }, r[key].toFixed(1));
+    el('text', { x: X1 + 38, y: ly[i] + 3, 'font-size': 8.5, 'font-weight': best ? 600 : 400, fill: best ? '#1a1a1a' : '#444' }, r.n);
+  });
+  el('circle', { cx: X0, cy: y(BASE[key]), r: 4.5, fill: '#1a1a1a', stroke: '#fff', 'stroke-width': 1 });
+  const below = key === 'B';
+  el('text', { x: below ? X0 : X0 - 8, y: y(BASE[key]) + (below ? 16 : -7), 'text-anchor': below ? 'middle' : 'end', 'font-size': 8.5, 'font-weight': 700 }, BASE[key].toFixed(1));
+}
+draw('a', 'A', 'Group A', '40 new answers to training questions, 129 criteria');
+draw('b', 'B', 'Group B v4', '101 answers to new questions, 324 criteria');
+</script>
